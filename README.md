@@ -2429,71 +2429,82 @@ function createChart(ctx, config) {
       const reader = document.getElementById('reader');
       reader.style.display = 'block';
 
-      // ล้างตัวเก่าออกถ้ามีค้างอยู่
-      if (html5QrcodeScanner) {
-        try { html5QrcodeScanner.clear(); } catch(e) {}
-      }
+      // 1. สร้างฟังก์ชันย่อยสำหรับตั้งค่าและเปิดกล้อง
+      const initScanner = () => {
+        // ใช้ Html5QrcodeScanner ซึ่งมีปุ่มขออนุญาตกล้องในตัว
+        html5QrcodeScanner = new Html5QrcodeScanner(
+          "reader",
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true
+            // นำ videoConstraints ออก เพื่อให้ไลบรารีจัดการกล้องเอง ลดปัญหาจอดำ
+          },
+          false
+        );
 
-      // ใช้ Html5QrcodeScanner ซึ่งมีปุ่มขออนุญาตกล้องในตัว แก้ปัญหาโดนบล็อกในมือถือ
-      html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader",
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          // ตั้งค่าให้จำกล้องล่าสุดที่ใช้ และพยายามใช้กล้องหลัง
-          rememberLastUsedCamera: true,
-          videoConstraints: { facingMode: "environment" }
-        },
-        false
-      );
-
-      // เริ่มสร้างหน้าจอ Scanner
-      html5QrcodeScanner.render(
-        (decodedText) => {
-          // ----- เมื่อสแกนสำเร็จ -----
-          const cleaned = decodedText.trim();
-          if (scanTargetId === 'loginUser') {
-            const el = document.getElementById('loginUser');
-            if (el) { el.value = cleaned; el.dispatchEvent(new Event('input')); }
-          } else if (scanTargetId && scanTargetId.startsWith('art')) {
-            const num = scanTargetId.replace('art', '');
-            const el = document.getElementById(scanTargetId);
-            if (el) el.value = cleaned;
-            if (typeof smartLookup === 'function') smartLookup(num);
-          } else if (scanTargetId) {
-            const el = document.getElementById(scanTargetId);
-            if (el) el.value = cleaned;
+        // เริ่มสร้างหน้าจอ Scanner
+        html5QrcodeScanner.render(
+          (decodedText) => {
+            // ----- เมื่อสแกนสำเร็จ -----
+            const cleaned = decodedText.trim();
+            if (scanTargetId === 'loginUser') {
+              const el = document.getElementById('loginUser');
+              if (el) { el.value = cleaned; el.dispatchEvent(new Event('input')); }
+            } else if (scanTargetId && scanTargetId.startsWith('art')) {
+              const num = scanTargetId.replace('art', '');
+              const el = document.getElementById(scanTargetId);
+              if (el) el.value = cleaned;
+              if (typeof smartLookup === 'function') smartLookup(num);
+            } else if (scanTargetId) {
+              const el = document.getElementById(scanTargetId);
+              if (el) el.value = cleaned;
+            }
+            stopScan(); // สแกนเสร็จให้ปิดกล้อง
+          },
+          (errorMessage) => {
+            // ----- เมื่อกำลังหา Barcode (ยังไม่เจอ) ปล่อยให้มันหาต่อไปเงียบๆ -----
           }
-          stopScan(); // สแกนเสร็จให้ปิดกล้อง
-        },
-        (errorMessage) => {
-          // ----- เมื่อกำลังหา Barcode (ยังไม่เจอ) -----
-          // ไม่ต้อง Alert อะไร ปล่อยให้มันหาต่อไปเงียบๆ
-        }
-      );
+        );
 
-      // สร้างปุ่มปิด Scanner แทรกลงไปเพิ่ม (เผื่อต้องการกดยกเลิก)
-      setTimeout(() => {
-        if (!document.getElementById('btn-close-scanner')) {
-            const closeBtn = document.createElement('button');
-            closeBtn.id = 'btn-close-scanner';
-            closeBtn.type = 'button';
-            closeBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>ปิด Scanner';
-            closeBtn.style.cssText = 'margin-top:10px; padding:10px; border-radius:20px; border:none; background:#ef4444; color:white; font-weight:700; cursor:pointer; width:100%; font-size:1rem;';
-            closeBtn.onclick = stopScan;
-            reader.appendChild(closeBtn);
-        }
-      }, 500);
+        // สร้างปุ่มปิด Scanner แทรกลงไปเพิ่ม (เผื่อผู้ใช้ต้องการกดยกเลิก)
+        setTimeout(() => {
+          if (!document.getElementById('btn-close-scanner')) {
+              const closeBtn = document.createElement('button');
+              closeBtn.id = 'btn-close-scanner';
+              closeBtn.type = 'button';
+              closeBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>ปิด Scanner';
+              closeBtn.style.cssText = 'margin-top:10px; padding:10px; border-radius:20px; border:none; background:#ef4444; color:white; font-weight:700; cursor:pointer; width:100%; font-size:1rem;';
+              closeBtn.onclick = stopScan;
+              reader.appendChild(closeBtn);
+          }
+        }, 500);
+      };
+
+      // 2. ตรวจสอบว่ามีกล้องเก่าค้างอยู่ไหม ถ้ามี ต้องรอให้ clear หน้าจอเสร็จก่อนถึงเปิดใหม่
+      if (html5QrcodeScanner) {
+        html5QrcodeScanner.clear().then(() => {
+          html5QrcodeScanner = null;
+          initScanner(); // เรียกเปิดกล้องใหม่
+        }).catch(err => {
+          html5QrcodeScanner = null;
+          initScanner(); // เรียกเปิดกล้องใหม่
+        });
+      } else {
+        initScanner(); // ถ้าไม่มีของเก่าค้าง เรียกเปิดกล้องใหม่ได้เลย
+      }
     }
 
     function stopScan() {
       if (html5QrcodeScanner) {
+        // ต้องรอให้ clear กล้องเสร็จสมบูรณ์ ค่อยซ่อนกรอบ reader
         html5QrcodeScanner.clear().then(() => {
           document.getElementById('reader').style.display = 'none';
+          html5QrcodeScanner = null;
         }).catch(err => {
           document.getElementById('reader').style.display = 'none';
+          html5QrcodeScanner = null;
         });
-        html5QrcodeScanner = null;
       } else {
         document.getElementById('reader').style.display = 'none';
       }
