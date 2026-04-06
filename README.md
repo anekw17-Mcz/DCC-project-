@@ -2416,37 +2416,49 @@ function createChart(ctx, config) {
         }
       }).smartSearch(val);
     }
-    let html5QrcodeScanner = null;
-    let scanTargetId = null;
+   let scanTargetId = null;
 
     function startScan(id) {
-      if (typeof Html5QrcodeScanner === 'undefined') {
+      if (typeof Html5Qrcode === 'undefined') {
         alert('ระบบสแกนยังโหลดไม่เสร็จ กรุณารอสักครู่แล้วกดใหม่ครับ');
         return;
       }
 
       scanTargetId = id;
-      const reader = document.getElementById('reader');
-      reader.style.display = 'block';
 
-      // 1. สร้างฟังก์ชันย่อยสำหรับตั้งค่าและเปิดกล้อง
-      const initScanner = () => {
-        // ใช้ Html5QrcodeScanner ซึ่งมีปุ่มขออนุญาตกล้องในตัว
-        html5QrcodeScanner = new Html5QrcodeScanner(
-          "reader",
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true
-            // นำ videoConstraints ออก เพื่อให้ไลบรารีจัดการกล้องเอง ลดปัญหาจอดำ
-          },
-          false
-        );
+      // สร้าง input file แบบซ่อนไว้ ถ้ายังไม่มี
+      let fileInput = document.getElementById('qr-input-file');
+      if (!fileInput) {
+          fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.id = 'qr-input-file';
+          fileInput.accept = 'image/*';
+          fileInput.capture = 'environment'; // คำสั่งวิเศษ บังคับเปิดกล้องหลังมือถือทันที
+          fileInput.style.display = 'none';
+          fileInput.onchange = handleFileScan;
+          document.body.appendChild(fileInput);
+      }
 
-        // เริ่มสร้างหน้าจอ Scanner
-        html5QrcodeScanner.render(
-          (decodedText) => {
-            // ----- เมื่อสแกนสำเร็จ -----
+      // จำลองการคลิกเพื่อเปิดกล้องมือถือ
+      fileInput.click();
+    }
+
+    function handleFileScan(event) {
+      if (event.target.files.length === 0) return;
+
+      const file = event.target.files[0];
+      const readerDiv = document.getElementById('reader');
+
+      // แสดงข้อความกำลังประมวลผล
+      readerDiv.style.display = 'block';
+      readerDiv.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary mb-2"></div><br><b>กำลังอ่านบาร์โค้ด...</b></div>';
+
+      // ใช้ Html5Qrcode แบบ Core (ทำงานเบื้องหลัง ไม่ต้องมีหน้าจอ UI)
+      const html5QrCode = new Html5Qrcode("reader");
+
+      html5QrCode.scanFile(file, true)
+        .then(decodedText => {
+            // ----- เมื่อสแกนและถอดรหัสสำเร็จ -----
             const cleaned = decodedText.trim();
             if (scanTargetId === 'loginUser') {
               const el = document.getElementById('loginUser');
@@ -2460,54 +2472,23 @@ function createChart(ctx, config) {
               const el = document.getElementById(scanTargetId);
               if (el) el.value = cleaned;
             }
-            stopScan(); // สแกนเสร็จให้ปิดกล้อง
-          },
-          (errorMessage) => {
-            // ----- เมื่อกำลังหา Barcode (ยังไม่เจอ) ปล่อยให้มันหาต่อไปเงียบๆ -----
-          }
-        );
-
-        // สร้างปุ่มปิด Scanner แทรกลงไปเพิ่ม (เผื่อผู้ใช้ต้องการกดยกเลิก)
-        setTimeout(() => {
-          if (!document.getElementById('btn-close-scanner')) {
-              const closeBtn = document.createElement('button');
-              closeBtn.id = 'btn-close-scanner';
-              closeBtn.type = 'button';
-              closeBtn.innerHTML = '<i class="bi bi-x-circle me-1"></i>ปิด Scanner';
-              closeBtn.style.cssText = 'margin-top:10px; padding:10px; border-radius:20px; border:none; background:#ef4444; color:white; font-weight:700; cursor:pointer; width:100%; font-size:1rem;';
-              closeBtn.onclick = stopScan;
-              reader.appendChild(closeBtn);
-          }
-        }, 500);
-      };
-
-      // 2. ตรวจสอบว่ามีกล้องเก่าค้างอยู่ไหม ถ้ามี ต้องรอให้ clear หน้าจอเสร็จก่อนถึงเปิดใหม่
-      if (html5QrcodeScanner) {
-        html5QrcodeScanner.clear().then(() => {
-          html5QrcodeScanner = null;
-          initScanner(); // เรียกเปิดกล้องใหม่
-        }).catch(err => {
-          html5QrcodeScanner = null;
-          initScanner(); // เรียกเปิดกล้องใหม่
+            readerDiv.style.display = 'none'; // ซ่อนข้อความ
+        })
+        .catch(err => {
+            // ----- เมื่อหาบาร์โค้ดไม่เจอในรูป -----
+            alert("สแกนไม่พบ Barcode ในรูปภาพ กรุณาถ่ายให้เห็นบาร์โค้ดชัดๆ แล้วลองใหม่ครับ");
+            readerDiv.style.display = 'none';
+        })
+        .finally(() => {
+           // ล้างค่า input เพื่อให้สามารถกดถ่ายรูปเดิมซ้ำได้
+           event.target.value = '';
+           html5QrCode.clear().catch(e => {});
         });
-      } else {
-        initScanner(); // ถ้าไม่มีของเก่าค้าง เรียกเปิดกล้องใหม่ได้เลย
-      }
     }
 
+    // เก็บฟังก์ชันนี้ไว้เผื่อระบบอื่นเรียกใช้ แต่ไม่ต้องทำอะไรแล้ว
     function stopScan() {
-      if (html5QrcodeScanner) {
-        // ต้องรอให้ clear กล้องเสร็จสมบูรณ์ ค่อยซ่อนกรอบ reader
-        html5QrcodeScanner.clear().then(() => {
-          document.getElementById('reader').style.display = 'none';
-          html5QrcodeScanner = null;
-        }).catch(err => {
-          document.getElementById('reader').style.display = 'none';
-          html5QrcodeScanner = null;
-        });
-      } else {
-        document.getElementById('reader').style.display = 'none';
-      }
+       document.getElementById('reader').style.display = 'none';
     }
     
     // =========== SAVE FUNCTIONS ===========
