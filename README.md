@@ -1217,32 +1217,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 <input type="number" id="qty2" class="form-control" placeholder="Quantity">
               </div>
 
-              <hr class="text-muted">
-              <label class="form-label-custom text-danger-custom mt-3"><i class="bi bi-exclamation-triangle me-1"></i> Problem</label>
-              <select id="problem" class="form-select mb-3"><option value="">-- เลือกปัญหาที่พบ --</option></select>
-              <label class="form-label-custom mt-2"><i class="bi bi-search me-1"></i> Root Cause Category</label>
-              <select id="rootCause" class="form-select mb-3">
-                <option value="">-- ระบุสาเหตุรากเหง้า (ถ้าทราบ) --</option>
-                <option value="Man">คน (Man - พนักงานผิดพลาด, ลืม)</option>
-                <option value="Machine">เครื่องจักร (Machine - อุปกรณ์เสีย)</option>
-                <option value="Method">กระบวนการ (Method - ขั้นตอน/เอกสารผิด)</option>
-                <option value="Material">วัตถุดิบ (Material - ของเสียจากต้นทาง)</option>
-              </select>
-
-              <label class="form-label-custom"><i class="bi bi-diagram-3 me-1"></i> Status & Action Owner</label>
-              <div class="row g-2 mb-3">
-                <div class="col-6">
-                  <select id="issueStatus" class="form-select">
-                    <option value="Open">🔴 Open (รอดำเนินการ)</option>
-                    <option value="In-Progress">🟡 In-Progress (กำลังแก้)</option>
-                    <option value="Closed">🟢 Closed (จบงานแล้ว)</option>
-                  </select>
-                </div>
-                <div class="col-6">
-                  <input type="text" id="actionOwner" class="form-control" placeholder="แผนกที่รับผิดชอบ">
-                </div>
-              </div>
-
               <label class="form-label-custom"><i class="bi bi-images me-1"></i> Images (Max 4)</label>
               <input type="file" id="imagesArea" class="form-control mb-3" accept="image/*" multiple>
 
@@ -1780,11 +1754,12 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <div class="pkpi-lbl">DEPTS ACTIVE</div>
                     <div class="pkpi-trend" id="pkpi_deptsTrend"></div>
                   </div>
-                  <div class="pkpi-card" id="pkpi5">
+                 <div class="pkpi-card" id="pkpi5">
                     <div class="pkpi-val" id="pkpi_topErr">—</div>
                     <div class="pkpi-lbl">TOP ERROR TYPE</div>
                     <div class="pkpi-trend" id="pkpi_topErrPct" style="font-size:.65rem"></div>
                   </div>
+                </div>
                 
                 <!-- ROW 1: Error Rate Trend (full width) -->
                 <div class="chart-container mb-3">
@@ -2654,10 +2629,7 @@ function createChart(ctx, config) {
           payload.desc2    = document.getElementById('desc2').value;
           payload.qty2     = document.getElementById('qty2').value;
           payload.remark   = document.getElementById('remark').value;
-          payload.rootCause   = document.getElementById('rootCause') ? document.getElementById('rootCause').value : '';
-          payload.issueStatus = document.getElementById('issueStatus') ? document.getElementById('issueStatus').value : '';
-          payload.actionOwner = document.getElementById('actionOwner') ? document.getElementById('actionOwner').value : '';
-
+        
           google.script.run
             .withSuccessHandler(function(msg) { 
               handleSuccess(msg, formId, btn, lod);
