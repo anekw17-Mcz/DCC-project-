@@ -425,3 +425,38 @@ function calculateWaiting(dccData, masterData) {
 
   return waiting;
 }
+// 🟢 ฟังก์ชันสรุปข้อมูล (ตัดส่วนคำนวณเงินออกแล้ว)
+function calculateSummary(dccData) {
+  const summary = { byMonth:{}, byType:{ PMWI:{}, Checklist:{} } };
+  
+  dccData.forEach(function(row) {
+    const month=row[1]||'', type=row[5]||'', dept=row[6]||'', subfunc=row[8]||'';
+    const unitCheck=parseFloat(row[10])||0, errAmount=parseFloat(row[11])||0;
+    if (!month) return;
+    
+    if (!summary.byMonth[month]) {
+      summary.byMonth[month] = {
+         totalUnit: 0, 
+         totalError: 0, 
+         pmwiError: 0, 
+         checklistError: 0
+      };
+    }
+    
+    summary.byMonth[month].totalUnit  += unitCheck;
+    summary.byMonth[month].totalError += errAmount;
+
+    if (type==='PMWI'||type==='PM/WI') {
+      summary.byMonth[month].pmwiError += errAmount;
+      if (!summary.byType.PMWI[dept]) summary.byType.PMWI[dept]={unitCheck:0,error:0};
+      summary.byType.PMWI[dept].unitCheck += unitCheck;
+      summary.byType.PMWI[dept].error     += errAmount;
+    } else if (type==='Checklist') {
+      summary.byMonth[month].checklistError += errAmount;
+      if (!summary.byType.Checklist[subfunc]) summary.byType.Checklist[subfunc]={unitCheck:0,error:0};
+      summary.byType.Checklist[subfunc].unitCheck += unitCheck;
+      summary.byType.Checklist[subfunc].error     += errAmount;
+    }
+  });
+  return summary;
+}
