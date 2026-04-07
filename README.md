@@ -1699,13 +1699,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 <div class="mb-1" id="kpiPrimaryLabel" style="font-size:.75rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">
                   <i class="bi bi-calendar-check me-1"></i>Primary Month: <span id="lblPrimaryMonth">—</span>
                 </div>
-                <div class="stats-grid mb-3" id="statsMonth1">
-                  <div class="stat-card" style="border-left-color:#ef4444; background: #fff1f2;">
-                    <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)"><i class="bi bi-cash-stack"></i></div>
-                    <div class="stat-value" id="pkpi_loss" style="color:#b91c1c">฿0</div>
-                    <div class="stat-label">YTD Estimated Loss</div>
-                    <div class="stat-trend"><span style="color:#7f1d1d; font-weight:bold;">มูลค่าความสูญเสียสะสม</span></div>
-                  </div>
                   <div class="stat-card" style="border-left-color:#ef4444">
                     <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="bi bi-exclamation-triangle"></i></div>
                     <div class="stat-value" id="totalErrorsMonth1">0</div>
@@ -1792,16 +1785,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <div class="pkpi-lbl">TOP ERROR TYPE</div>
                     <div class="pkpi-trend" id="pkpi_topErrPct" style="font-size:.65rem"></div>
                   </div>
-                </div> <div class="chart-container mb-3">
-                  <div class="chart-title">
-                    <i class="bi bi-cash-coin me-2" style="color:#dc2626"></i>
-                    Financial Loss Trend — เทรนด์มูลค่าความสูญเสียรายเดือน
-                  </div>
-                  <div style="font-size:.72rem;background:#fff1f2;border-radius:6px;padding:6px 10px;margin-bottom:8px;color:#9f1239">
-                    📊 <b>วิเคราะห์:</b> มูลค่าความเสียหายประเมินรายเดือน (COPQ) — <span style="font-weight:bold;color:#dc2626;">เส้นยิ่งต่ำยิ่งดี แปลว่าเซฟเงินให้บริษัทได้</span>
-                  </div>
-                  <div class="chart-canvas-wrap" style="height:200px"><canvas id="lossTrendChart"></canvas></div>
-                </div>
                 
                 <!-- ROW 1: Error Rate Trend (full width) -->
                 <div class="chart-container mb-3">
