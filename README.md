@@ -1220,6 +1220,28 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
               <hr class="text-muted">
               <label class="form-label-custom text-danger-custom mt-3"><i class="bi bi-exclamation-triangle me-1"></i> Problem</label>
               <select id="problem" class="form-select mb-3"><option value="">-- เลือกปัญหาที่พบ --</option></select>
+              <label class="form-label-custom mt-2"><i class="bi bi-search me-1"></i> Root Cause Category</label>
+              <select id="rootCause" class="form-select mb-3">
+                <option value="">-- ระบุสาเหตุรากเหง้า (ถ้าทราบ) --</option>
+                <option value="Man">คน (Man - พนักงานผิดพลาด, ลืม)</option>
+                <option value="Machine">เครื่องจักร (Machine - อุปกรณ์เสีย)</option>
+                <option value="Method">กระบวนการ (Method - ขั้นตอน/เอกสารผิด)</option>
+                <option value="Material">วัตถุดิบ (Material - ของเสียจากต้นทาง)</option>
+              </select>
+
+              <label class="form-label-custom"><i class="bi bi-diagram-3 me-1"></i> Status & Action Owner</label>
+              <div class="row g-2 mb-3">
+                <div class="col-6">
+                  <select id="issueStatus" class="form-select">
+                    <option value="Open">🔴 Open (รอดำเนินการ)</option>
+                    <option value="In-Progress">🟡 In-Progress (กำลังแก้)</option>
+                    <option value="Closed">🟢 Closed (จบงานแล้ว)</option>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <input type="text" id="actionOwner" class="form-control" placeholder="แผนกที่รับผิดชอบ">
+                </div>
+              </div>
 
               <label class="form-label-custom"><i class="bi bi-images me-1"></i> Images (Max 4)</label>
               <input type="file" id="imagesArea" class="form-control mb-3" accept="image/*" multiple>
@@ -1678,6 +1700,12 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                   <i class="bi bi-calendar-check me-1"></i>Primary Month: <span id="lblPrimaryMonth">—</span>
                 </div>
                 <div class="stats-grid mb-3" id="statsMonth1">
+                  <div class="stat-card" style="border-left-color:#ef4444; background: #fff1f2;">
+                    <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#b91c1c)"><i class="bi bi-cash-stack"></i></div>
+                    <div class="stat-value" id="pkpi_loss" style="color:#b91c1c">฿0</div>
+                    <div class="stat-label">YTD Estimated Loss</div>
+                    <div class="stat-trend"><span style="color:#7f1d1d; font-weight:bold;">มูลค่าความสูญเสียสะสม</span></div>
+                  </div>
                   <div class="stat-card" style="border-left-color:#ef4444">
                     <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="bi bi-exclamation-triangle"></i></div>
                     <div class="stat-value" id="totalErrorsMonth1">0</div>
@@ -1764,8 +1792,17 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <div class="pkpi-lbl">TOP ERROR TYPE</div>
                     <div class="pkpi-trend" id="pkpi_topErrPct" style="font-size:.65rem"></div>
                   </div>
+                  <div class="chart-container mb-3">
+                  <div class="chart-title">
+                    <i class="bi bi-cash-coin me-2" style="color:#dc2626"></i>
+                    Financial Loss Trend — เทรนด์มูลค่าความสูญเสียรายเดือน
+                  </div>
+                  <div style="font-size:.72rem;background:#fff1f2;border-radius:6px;padding:6px 10px;margin-bottom:8px;color:#9f1239">
+                    📊 <b>วิเคราะห์:</b> มูลค่าความเสียหายประเมินรายเดือน (COPQ) — <span style="font-weight:bold;color:#dc2626;">เส้นยิ่งต่ำยิ่งดี แปลว่าเซฟเงินให้บริษัทได้</span>
+                  </div>
+                  <div class="chart-canvas-wrap" style="height:200px"><canvas id="lossTrendChart"></canvas></div>
                 </div>
-
+                
                 <!-- ROW 1: Error Rate Trend (full width) -->
                 <div class="chart-container mb-3">
                   <div class="chart-title">
@@ -2634,7 +2671,10 @@ function createChart(ctx, config) {
           payload.desc2    = document.getElementById('desc2').value;
           payload.qty2     = document.getElementById('qty2').value;
           payload.remark   = document.getElementById('remark').value;
-          
+          payload.rootCause   = document.getElementById('rootCause') ? document.getElementById('rootCause').value : '';
+          payload.issueStatus = document.getElementById('issueStatus') ? document.getElementById('issueStatus').value : '';
+          payload.actionOwner = document.getElementById('actionOwner') ? document.getElementById('actionOwner').value : '';
+
           google.script.run
             .withSuccessHandler(function(msg) { 
               handleSuccess(msg, formId, btn, lod);
@@ -4751,7 +4791,40 @@ function updateKpiCards(monthKey) {
       // ── Palette: professional & distinct ─────────────────────────
       const pal = ['#1d4ed8','#7c3aed','#0891b2','#059669','#d97706','#be185d','#0369a1','#4f46e5'];
       const TARGET = 5;
+// 🟢 1. คำนวณยอดเงินสูญเสีย (COPQ) และวาดกราฟ
+      let totalLossYTD = 0;
+      const lossTrendData = allMonths.map(m => {
+        const loss = reportData?.summary?.byMonth?.[m]?.financialLoss || 0;
+        totalLossYTD += loss; // บวกสะสมเข้าไป
+        return loss;
+      });
+      
+      // เอาเงินที่บวกสะสม ไปโชว์ที่ป้าย KPI Card ด้านบน
+      const elLoss = document.getElementById('pkpi_loss');
+      if (elLoss) elLoss.textContent = '฿' + totalLossYTD.toLocaleString();
 
+      // 🟢 2. วาดกราฟเส้น Financial Loss Trend
+      _destroyAC('lossTrend');
+      const ctxLoss = document.getElementById('lossTrendChart')?.getContext('2d');
+      if (ctxLoss && lossTrendData.some(v => v > 0)) {
+        _aC['lossTrend'] = createChart(ctxLoss, {
+          type: 'line',
+          data: {
+            labels: allMonths,
+            datasets: [{
+              label: 'Financial Loss (THB)', data: lossTrendData,
+              borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.15)',
+              borderWidth: 3, fill: true, tension: 0.35, pointRadius: 5, pointBackgroundColor: '#dc2626'
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { callback: v => '฿' + v.toLocaleString() } } },
+            plugins: { tooltip: { callbacks: { label: c => ' ความสูญเสีย: ฿' + c.raw.toLocaleString() } } }
+          }
+        });
+      } else if (ctxLoss) drawNoData('lossTrendChart', 'ไม่มีข้อมูลความสูญเสีย (COPQ = 0)');
+      
       // ── Chart 1: Error Rate Trend ─────────────────────────────────
       const errRates = allMonths.map(m=>{
         const v=byMonth[m]; return v&&v.units>0?+(v.errors/v.units*100).toFixed(3):0;
