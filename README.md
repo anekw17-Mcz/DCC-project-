@@ -1673,12 +1673,16 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 <div class="mb-1" id="kpiPrimaryLabel" style="font-size:.75rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">
                   <i class="bi bi-calendar-check me-1"></i>Primary Month: <span id="lblPrimaryMonth">—</span>
                 </div>
+
+                <div class="stats-grid mb-3" id="statsMonth1">
+
                   <div class="stat-card" style="border-left-color:#ef4444">
                     <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="bi bi-exclamation-triangle"></i></div>
                     <div class="stat-value" id="totalErrorsMonth1">0</div>
                     <div class="stat-label">Total Errors</div>
                     <div class="stat-trend"><span id="errorCompare"></span></div>
                   </div>
+                
                   <div class="stat-card" style="border-left-color:#10b981">
                     <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="bi bi-clipboard-check"></i></div>
                     <div class="stat-value" id="totalUnitsMonth1">0</div>
