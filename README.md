@@ -1792,7 +1792,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <div class="pkpi-lbl">TOP ERROR TYPE</div>
                     <div class="pkpi-trend" id="pkpi_topErrPct" style="font-size:.65rem"></div>
                   </div>
-                  <div class="chart-container mb-3">
+                </div> <div class="chart-container mb-3">
                   <div class="chart-title">
                     <i class="bi bi-cash-coin me-2" style="color:#dc2626"></i>
                     Financial Loss Trend — เทรนด์มูลค่าความสูญเสียรายเดือน
@@ -4824,7 +4824,7 @@ function updateKpiCards(monthKey) {
           }
         });
       } else if (ctxLoss) drawNoData('lossTrendChart', 'ไม่มีข้อมูลความสูญเสีย (COPQ = 0)');
-      
+
       // ── Chart 1: Error Rate Trend ─────────────────────────────────
       const errRates = allMonths.map(m=>{
         const v=byMonth[m]; return v&&v.units>0?+(v.errors/v.units*100).toFixed(3):0;
