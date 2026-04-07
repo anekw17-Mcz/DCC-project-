@@ -1975,7 +1975,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
