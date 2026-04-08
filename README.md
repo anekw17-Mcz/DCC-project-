@@ -1773,14 +1773,14 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 <div class="chart-container mb-3">
                   <div class="chart-title">
                     <i class="bi bi-graph-up-arrow me-2" style="color:#1d4ed8"></i>
-                    Error Rate Trend — รายเดือนทั้งหมด + Target 5% Zone
+                    Error Rate Trend — รายเดือนทั้งหมด + Target 2% Zone
                   </div>
                   <div style="font-size:.72rem;background:#f8faff;border-radius:6px;padding:6px 10px;margin-bottom:8px;color:#475569">
-                    📊 <b>วิเคราะห์:</b> แนวโน้ม Error Rate ย้อนหลัง — เส้นสีน้ำเงิน = Actual | เส้นประ = Moving Avg 3 เดือน | พื้นที่แดง = เกิน Target 5%
+                    📊 <b>วิเคราะห์:</b> แนวโน้ม Error Rate ย้อนหลัง — เส้นสีน้ำเงิน = Actual | เส้นประ = Moving Avg 3 เดือน | พื้นที่แดง = เกิน Target 2%
                     <br>
                     <span style="background:#fee2e2;color:#dc2626;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem">เส้นขึ้น = แย่ลง</span>
                     <span style="background:#d1fae5;color:#065f46;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem;margin-left:4px">เส้นลง = Improvement ✅</span>
-                    <span style="background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem;margin-left:4px">ต่ำกว่าเส้น 5% = ปลอดภัย</span>
+                    <span style="background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem;margin-left:4px">ต่ำกว่าเส้น 2% = ปลอดภัย</span>
                   </div>
                   <div class="chart-canvas-wrap" style="height:200px"><canvas id="errorRateTrendProfChart"></canvas></div>
                   <div class="chart-caption" id="cap_errorRateTrendProfChart"></div>
@@ -2980,7 +2980,7 @@ function setChartTitle(canvasId, text) {
       }
 
       // Target evaluation
-      const target = 5; // 5%
+      const target = 2; // 2%
       const targetText = errRate <= target
         ? `On target: Error Rate ${errRate.toFixed(2)}% ≤ ${target}%`
         : `Above target: Error Rate ${errRate.toFixed(2)}% > ${target}%`;
@@ -3812,7 +3812,7 @@ function renderProfessionalCharts(selectedMonth) {
         { label: 'Trend (3-Month MA)', data: movingAvg,
           borderColor: '#f59e0b', backgroundColor: 'transparent',
           borderWidth: 2.5, pointRadius: 0, tension: 0.4, borderDash: [4,3] },
-        { label: 'Target (5%)', data: last6Months.map(()=>5),
+        { label: 'Target (2%)', data: last6Months.map(()=>2),
           borderColor: '#ef4444', backgroundColor: 'transparent',
           borderWidth: 1.5, pointRadius: 0, borderDash: [8,5] }
       ]
@@ -4630,14 +4630,15 @@ function updateKpiCards(monthKey) {
         '</div>'
       ).join('');
       const allPhotos = targetRows.flatMap(_aPhotos);
-      links.innerHTML = allPhotos.length
-        ? allPhotos.map((url,i) =>
-            '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm" ' +
-            'style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:8px 14px">' +
-            '<i class="bi bi-image me-1"></i>Photo '+(i+1)+'</a>').join('')
-        : '<span class="text-muted">ไม่มีรูปภาพ</span>';
-      modal.style.display = 'block';
-    }
+      if (allPhotos.length) {
+        links.innerHTML = allPhotos.map((url,i) =>
+          `<a href="${url}" target="_blank" rel="noopener" style="display:inline-block; margin: 0 8px 8px 0; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; box-shadow: 0 3px 6px rgba(0,0,0,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+             <img src="${url}" style="height: 150px; min-width: 100px; max-width: 100%; object-fit: cover; display: block;" alt="Photo ${i+1}">
+           </a>`
+        ).join('');
+      } else {
+        links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>';
+      }
 
     function closeAreaPhotoModal() {
       const m = document.getElementById('areaPhotoModal'); if (m) m.style.display='none';
@@ -4686,9 +4687,9 @@ function updateKpiCards(monthKey) {
       const allPhotos = targetRows.flatMap(_aPhotos);
       if (allPhotos.length) {
         links.innerHTML = allPhotos.map((url,i) =>
-          '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm" ' +
-          'style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:8px 14px">' +
-          '<i class="bi bi-image me-1"></i>Photo '+(i+1)+'</a>'
+          `<a href="${url}" target="_blank" rel="noopener" style="display:inline-block; margin: 0 8px 8px 0; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; box-shadow: 0 3px 6px rgba(0,0,0,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+             <img src="${url}" style="height: 150px; min-width: 100px; max-width: 100%; object-fit: cover; display: block;" alt="Photo ${i+1}">
+           </a>`
         ).join('');
       } else {
         links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>';
@@ -4753,7 +4754,7 @@ function updateKpiCards(monthKey) {
 
       // ── Palette: professional & distinct ─────────────────────────
       const pal = ['#1d4ed8','#7c3aed','#0891b2','#059669','#d97706','#be185d','#0369a1','#4f46e5'];
-      const TARGET = 5;
+      const TARGET = 2;
 
       // ── Chart 1: Error Rate Trend ─────────────────────────────────
       const errRates = allMonths.map(m=>{
@@ -4778,7 +4779,7 @@ function updateKpiCards(monthKey) {
           {label:'Moving Avg (3M)', data:ma3,
            borderColor:'#f59e0b', borderWidth:1.5, borderDash:[6,4],
            pointRadius:0, fill:false, tension:0.4, order:2},
-          {label:'Target 5%', data:allMonths.map(()=>TARGET),
+          {label:'Target 2%', data:allMonths.map(()=>TARGET),
            borderColor:'rgba(220,38,38,0.5)', borderWidth:1.5, borderDash:[3,3],
            pointRadius:0, fill:false, order:3},
         ]},
@@ -4817,7 +4818,7 @@ function updateKpiCards(monthKey) {
             {label:'Error Rate (%)', data:deptSorted.map(d=>d.rate),
              backgroundColor:barColors.map(c=>c+'cc'),
              borderColor:barColors, borderWidth:1.5, borderRadius:5},
-            {type:'line', label:'Target 5%', data:deptSorted.map(()=>TARGET),
+            {type:'line', label:'Target 2%', data:deptSorted.map(()=>TARGET),
              borderColor:'rgba(220,38,38,0.7)', borderWidth:1.5, borderDash:[5,4],
              pointRadius:0, fill:false}
           ]},
@@ -4948,14 +4949,6 @@ function updateKpiCards(monthKey) {
           }
         });
       } else if(ctxC) drawNoData('completionChart','ไม่มีข้อมูล Plan');
-
-      // ── NEW: Advanced Analytics Charts ──────────────────────────
-      try { renderPresentationKPIs(rows, selM, allMonths, byMonth); } catch(e) { console.warn('KPI Banner err',e); }
-      try { renderParetoChart(rows, selM); } catch(e) { console.warn('Pareto err',e); }
-      try { renderWeeklyTrend(rows, selM); } catch(e) { console.warn('Weekly err',e); }
-      try { renderRadarScorecard(rows, selM); } catch(e) { console.warn('Radar err',e); }
-      try { renderFuncBreakdown(rows, selM); } catch(e) { console.warn('FuncBreak err',e); }
-      try { renderSubFuncHeatmap(rows, selM); } catch(e) { console.warn('Heatmap err',e); }
 
       // ── NEW: Advanced Analytics Charts ──────────────────────────
       try { renderPresentationKPIs(rows, selM, allMonths, byMonth); } catch(e) { console.warn('KPI Banner err',e); }
@@ -5841,7 +5834,7 @@ function updateKpiCards(monthKey) {
 
   // ── Presentation KPI Banner ──────────────────────────────────
   function renderPresentationKPIs(rows, selM, allMonths, byMonth) {
-    const TARGET_ERR = 5;
+    const TARGET_ERR = 2;
     const cur  = byMonth[selM] || {units:0, errors:0};
     const prevM = allMonths[allMonths.indexOf(selM)-1];
     const prev = prevM ? byMonth[prevM] : null;
@@ -5991,7 +5984,7 @@ function updateKpiCards(monthKey) {
     });
     const rates = weeks.map(w => byWeek[w].units>0 ? +(byWeek[w].errors/byWeek[w].units*100).toFixed(3) : 0);
     const avgRate = rates.length ? +(rates.reduce((s,v)=>s+v,0)/rates.length).toFixed(3) : 0;
-    const TARGET = 5;
+    const TARGET = 2;
 
     _destroyAC('weekly');
     _aC['weekly'] = createChart(ctx, {
@@ -6006,7 +5999,7 @@ function updateKpiCards(monthKey) {
         { label:'Monthly Avg', data:weeks.map(()=>avgRate),
           borderColor:'#059669', borderWidth:1.5, borderDash:[5,4],
           pointRadius:0, fill:false },
-        { label:'Target 5%', data:weeks.map(()=>TARGET),
+        { label:'Target 2%', data:weeks.map(()=>TARGET),
           borderColor:'rgba(220,38,38,.4)', borderWidth:1, borderDash:[3,3],
           pointRadius:0, fill:false }
       ]},
@@ -6120,7 +6113,7 @@ function updateKpiCards(monthKey) {
 
     if(!funcs.length) { drawNoData('funcBreakdownChart','ไม่มีข้อมูล'); return; }
 
-    const TARGET = 5;
+    const TARGET = 2;
     const barClrs = funcs.map(f => f.rate>TARGET?'rgba(220,38,38,.8)':f.rate>TARGET*.6?'rgba(245,158,11,.8)':'rgba(16,185,129,.8)');
 
     _destroyAC('funcbreak');
