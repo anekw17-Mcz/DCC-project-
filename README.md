@@ -1766,6 +1766,9 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                   </div>
                 </div>
 
+                <div id="smartActionsPanel" class="mb-3"></div>
+                <div id="chronicIssuesPanel" class="mb-4"></div>
+
                 <!-- ROW 1: Error Rate Trend (full width) -->
                 <div class="chart-container mb-3">
                   <div class="chart-title">
@@ -4953,7 +4956,118 @@ function updateKpiCards(monthKey) {
       try { renderRadarScorecard(rows, selM); } catch(e) { console.warn('Radar err',e); }
       try { renderFuncBreakdown(rows, selM); } catch(e) { console.warn('FuncBreak err',e); }
       try { renderSubFuncHeatmap(rows, selM); } catch(e) { console.warn('Heatmap err',e); }
-    }
+
+      // ── NEW: Advanced Analytics Charts ──────────────────────────
+      try { renderPresentationKPIs(rows, selM, allMonths, byMonth); } catch(e) { console.warn('KPI Banner err',e); }
+      try { renderParetoChart(rows, selM); } catch(e) { console.warn('Pareto err',e); }
+      try { renderWeeklyTrend(rows, selM); } catch(e) { console.warn('Weekly err',e); }
+      try { renderRadarScorecard(rows, selM); } catch(e) { console.warn('Radar err',e); }
+      try { renderFuncBreakdown(rows, selM); } catch(e) { console.warn('FuncBreak err',e); }
+      try { renderSubFuncHeatmap(rows, selM); } catch(e) { console.warn('Heatmap err',e); }
+
+      // 🟢🟢🟢 [NEW] โค้ดส่วนที่ต้องวางแทรก เริ่มตรงนี้ 🟢🟢🟢
+      try {
+        const prevM = allMonths[allMonths.indexOf(selM)-1];
+        
+        // 1. หา Top Problem ของเดือนนี้
+        const errTypeCnt = {};
+        rows.filter(r=>(r[1]||'').trim()===selM).forEach(r=>{
+          [r[12],r[13],r[14],r[15],r[16]].forEach(v=>{ const s=(v||'').toString().trim(); if(s) errTypeCnt[s]=(errTypeCnt[s]||0)+1; });
+        });
+        const topErr = Object.entries(errTypeCnt).sort((a,b)=>b[1]-a[1])[0];
+
+        // 2. วิเคราะห์ Dept ที่แย่ที่สุดในเดือนนี้
+        const deptSortedForAction = Object.entries(byDept)
+          .map(([d,v])=>({d, rate:v.units>0?+(v.errors/v.units*100).toFixed(2):0}))
+          .sort((a,b)=>b.rate-a.rate);
+        const worstDept = deptSortedForAction[0];
+
+        // --- สร้าง Smart Actions HTML ---
+        const smartPanel = document.getElementById('smartActionsPanel');
+        if (smartPanel && rows.length > 0) {
+          let actionsHtml = `<div style="background:linear-gradient(135deg, #1e3a8a, #1d4ed8); padding: 18px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(29,78,216,0.2);">
+            <h6 style="font-weight: 800; margin-bottom: 12px; letter-spacing: 0.5px;"><i class="bi bi-robot me-2"></i>AI Action Items (สิ่งที่ควรทำทันที)</h6>
+            <ul style="margin: 0; padding-left: 20px; line-height: 1.6; font-size: 0.85rem;">`;
+          
+          if (worstDept && worstDept.rate > TARGET) {
+            actionsHtml += `<li><b>สั่งการแผนก ${worstDept.d}:</b> มี Error Rate สูงถึง <span style="color:#fca5a5; font-weight:bold;">${worstDept.rate}%</span> ทะลุเป้าหมาย ต้องเรียกหัวหน้าแผนกมาทบทวนการทำงานด่วน</li>`;
+          } else if (worstDept) {
+            actionsHtml += `<li><b>ยอดเยี่ยม!</b> ทุกแผนกควบคุม Error Rate ได้ต่ำกว่าเป้าหมาย (${TARGET}%) ควรรักษามาตรฐานนี้ไว้</li>`;
+          }
+
+          if (topErr) {
+            actionsHtml += `<li><b>ทบทวน WI:</b> ปัญหาที่พบซ้ำซากที่สุดคือ <b>"${topErr[0]}"</b> แนะนำให้ทำ Visual Control หรือ One-Point Lesson (OPL) แปะหน้างานจุดนี้</li>`;
+          }
+
+          actionsHtml += `</ul></div>`;
+          smartPanel.innerHTML = actionsHtml;
+        }
+
+        // --- วิเคราะห์ Chronic Issues (ปัญหาเรื้อรัง 2 เดือนติด) ---
+        const chronicPanel = document.getElementById('chronicIssuesPanel');
+        if (chronicPanel && prevM) {
+          const getAgg = (m) => {
+            const agg = {};
+            rows.filter(r=>(r[1]||'').trim()===m).forEach(r=>{
+              const d=(r[6]||'').trim(), sf=(r[8]||'').toString().trim();
+              if(!d||!sf) return;
+              const key = d+'|'+sf;
+              if(!agg[key]) agg[key]={d, sf, u:0, e:0};
+              agg[key].u += parseFloat(r[10])||0;
+              agg[key].e += parseFloat(r[11])||0;
+            });
+            return agg;
+          };
+          
+          const curData = getAgg(selM);
+          const prevData = getAgg(prevM);
+          const chronicList = [];
+
+          Object.keys(curData).forEach(k => {
+            const c = curData[k];
+            const r2 = c.u>0 ? (c.e/c.u*100) : 0;
+            if (r2 > TARGET && prevData[k]) {
+              const p = prevData[k];
+              const r1 = p.u>0 ? (p.e/p.u*100) : 0;
+              if (r1 > TARGET) chronicList.push({ d:c.d, sf:c.sf, r1, r2, e1:p.e, e2:c.e });
+            }
+          });
+
+          if (chronicList.length > 0) {
+            chronicList.sort((a,b)=>b.r2 - a.r2); // เรียงจากพังมากไปพังน้อย
+            let tableRows = chronicList.map(c => `
+              <tr style="background: #fef2f2;">
+                <td style="font-weight:700;">${c.d}</td>
+                <td>${c.sf}</td>
+                <td class="text-center text-danger" style="font-weight:600;">${c.r1.toFixed(1)}%</td>
+                <td class="text-center text-danger" style="font-weight:800; font-size:1.1em;">${c.r2.toFixed(1)}%</td>
+                <td><span class="badge bg-danger" style="box-shadow: 0 2px 4px rgba(220,38,38,0.3);">ต้องแก้ไขด่วน (CAR)</span></td>
+              </tr>
+            `).join('');
+
+            chronicPanel.innerHTML = `
+              <div class="chart-container" style="border-left: 4px solid #dc2626; padding-bottom: 0;">
+                <div class="chart-title text-danger" style="border-bottom: none;"><i class="bi bi-exclamation-octagon-fill me-2"></i>Chronic Issues (ปัญหาเรื้อรัง: Error ทะลุเป้า 2 เดือนติด)</div>
+                <div class="table-wrapper mt-2 mb-0" style="border-radius: 0 0 12px 12px; box-shadow: none;">
+                  <table class="table table-sm mb-0">
+                    <thead style="background:#fee2e2; color:#991b1b;">
+                      <tr><th>Department</th><th>Sub-Function</th><th class="text-center">${prevM}</th><th class="text-center">${selM}</th><th>Action Required</th></tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                  </table>
+                </div>
+              </div>`;
+          } else {
+             chronicPanel.innerHTML = ''; 
+          }
+        } else if (chronicPanel) {
+           chronicPanel.innerHTML = '';
+        }
+      } catch(e) { console.warn("Action Items Error:", e); }
+      // 🟢🟢🟢 สิ้นสุดโค้ดส่วนที่เพิ่มใหม่ 🟢🟢🟢
+
+    } // <--- นี่คือปีกกาปิดตัวสุดท้ายสุดของฟังก์ชัน renderSummaryCharts ปล่อยไว้เหมือนเดิมครับ
+  
 
 
 
