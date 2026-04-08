@@ -1217,6 +1217,10 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 <input type="number" id="qty2" class="form-control" placeholder="Quantity">
               </div>
 
+              <hr class="text-muted">
+              <label class="form-label-custom text-danger-custom mt-3"><i class="bi bi-exclamation-triangle me-1"></i> Problem</label>
+              <select id="problem" class="form-select mb-3"><option value="">-- เลือกปัญหาที่พบ --</option></select>
+
               <label class="form-label-custom"><i class="bi bi-images me-1"></i> Images (Max 4)</label>
               <input type="file" id="imagesArea" class="form-control mb-3" accept="image/*" multiple>
 
@@ -1673,16 +1677,13 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 <div class="mb-1" id="kpiPrimaryLabel" style="font-size:.75rem;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.05em">
                   <i class="bi bi-calendar-check me-1"></i>Primary Month: <span id="lblPrimaryMonth">—</span>
                 </div>
-
                 <div class="stats-grid mb-3" id="statsMonth1">
-
                   <div class="stat-card" style="border-left-color:#ef4444">
                     <div class="stat-icon" style="background:linear-gradient(135deg,#ef4444,#dc2626)"><i class="bi bi-exclamation-triangle"></i></div>
                     <div class="stat-value" id="totalErrorsMonth1">0</div>
                     <div class="stat-label">Total Errors</div>
                     <div class="stat-trend"><span id="errorCompare"></span></div>
                   </div>
-                
                   <div class="stat-card" style="border-left-color:#10b981">
                     <div class="stat-icon" style="background:linear-gradient(135deg,#10b981,#059669)"><i class="bi bi-clipboard-check"></i></div>
                     <div class="stat-value" id="totalUnitsMonth1">0</div>
@@ -1758,13 +1759,13 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <div class="pkpi-lbl">DEPTS ACTIVE</div>
                     <div class="pkpi-trend" id="pkpi_deptsTrend"></div>
                   </div>
-                 <div class="pkpi-card" id="pkpi5">
+                  <div class="pkpi-card" id="pkpi5">
                     <div class="pkpi-val" id="pkpi_topErr">—</div>
                     <div class="pkpi-lbl">TOP ERROR TYPE</div>
                     <div class="pkpi-trend" id="pkpi_topErrPct" style="font-size:.65rem"></div>
                   </div>
                 </div>
-                
+
                 <!-- ROW 1: Error Rate Trend (full width) -->
                 <div class="chart-container mb-3">
                   <div class="chart-title">
@@ -1979,6 +1980,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -2632,7 +2634,7 @@ function createChart(ctx, config) {
           payload.desc2    = document.getElementById('desc2').value;
           payload.qty2     = document.getElementById('qty2').value;
           payload.remark   = document.getElementById('remark').value;
-        
+          
           google.script.run
             .withSuccessHandler(function(msg) { 
               handleSuccess(msg, formId, btn, lod);
@@ -3090,7 +3092,7 @@ function populateMonthFilter() {
         depts = ['DC all', 'BC', 'RTV', 'FTDC2'];
       } else {
         // Build from Sheet data for other types
-        const _isAllVariant = d => ['All','all','ALL'].includes((d||'').trim());
+        const _isAllVariant = d => ['All','DC all','DC All','all','ALL'].includes((d||'').trim());
         const set = new Set();
         if (reportData && reportData.checked && Array.isArray(reportData.checked.dccData)) {
           reportData.checked.dccData.forEach(r => {
@@ -4114,7 +4116,7 @@ function __computeKpiFromDcc(monthKey, typeFilter, deptFilter) {
     const dept = (r[6] || '').toString().trim();
     const type = (r[5] || '').toString().trim();  // r[5]=Type (PMWI/Checklist)
 
-    const _isAll = (v) => ['All','all','ALL'].includes((v||'').trim());
+    const _isAll = (v) => ['All','DC all','DC All','all','ALL'].includes((v||'').trim());
     if (typeFilter && !_isAll(typeFilter) && type !== typeFilter) continue;
     if (deptFilter && !_isAll(deptFilter) && dept !== deptFilter) continue;
 
@@ -4875,13 +4877,9 @@ function updateKpiCards(monthKey) {
         });
       } else if(ctxB) drawNoData('deptComparisonChart','ไม่มีข้อมูล');
 
-    // ── Chart 4: Grouped Bar — Error Rate by Dept × Last 6 Months ─
+      // ── Chart 4: Grouped Bar — Error Rate by Dept × Last 6 Months ─
       const topDepts = Object.entries(byDeptMonth)
-        .map(([d,m]) => {
-           let sumU = 0, sumE = 0;
-           Object.values(m).forEach(v => { sumU += v.units; sumE += v.errors; });
-           return { d, total: sumU > 0 ? (sumE / sumU) : 0 };
-        })
+        .map(([d,m])=>({d, total:Object.values(m).reduce((s,v)=>s+(v.units>0?v.errors/v.units:0),0)}))
         .sort((a,b)=>b.total-a.total).slice(0,5).map(x=>x.d);
 
       const groupedDS = topDepts.map((d,i)=>({
@@ -5660,8 +5658,7 @@ function updateKpiCards(monthKey) {
       const byMonth = {};
       filtered.forEach(r => {
         const mk=(r[1]||'').trim(); if(!mk)return;
-        if(!byMonth[mk]) byMonth[mk]={plan:0, units:0, errors:0};
-        byMonth[mk].plan   += parseFloat(r[9])||0;  // 🟢 เพิ่มบรรทัดดึงยอดเป้าหมาย
+        if(!byMonth[mk]) byMonth[mk]={units:0,errors:0};
         byMonth[mk].units  += parseFloat(r[10])||0;
         byMonth[mk].errors += parseFloat(r[11])||0;
       });
@@ -5672,21 +5669,18 @@ function updateKpiCards(monthKey) {
         return;
       }
 
-      // 🔴 ลบบรรทัด maxU ทิ้งไปแล้ว เพราะเราจะใช้ Plan แทน
+      // baseline = max units สำหรับ coverage
+      const maxU = Math.max(...Object.values(byMonth).map(v=>v.units), 1);
 
       const rowsHtml = months.map((mk, i) => {
         const cur  = byMonth[mk];
         const prev = i > 0 ? byMonth[months[i-1]] : null;
 
         const errRate  = cur.units > 0 ? +(cur.errors/cur.units*100).toFixed(2) : 0;
-        
-        // 🟢 เปลี่ยนสูตร Coverage: เอา Unit หารด้วย Plan
-        const coverage = cur.plan > 0 ? +(cur.units/cur.plan*100).toFixed(1) : 0;
+        const coverage = +(cur.units/maxU*100).toFixed(1);
 
         const prevErr = prev && prev.units > 0 ? +(prev.errors/prev.units*100).toFixed(2) : null;
-        
-        // 🟢 เปลี่ยนสูตร Prev Coverage (ของเดือนที่แล้ว): เอา Unit หารด้วย Plan
-        const prevCov = prev && prev.plan > 0 ? +(prev.units/prev.plan*100).toFixed(1) : null;
+        const prevCov = prev ? +(prev.units/maxU*100).toFixed(1) : null;
 
         const dErr = prevErr !== null ? +(errRate - prevErr).toFixed(2) : null;
         const dCov = prevCov !== null ? +(coverage - prevCov).toFixed(1) : null;
