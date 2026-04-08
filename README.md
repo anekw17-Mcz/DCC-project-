@@ -1990,6 +1990,18 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
       <span class="fw-bold fs-5" style="color: var(--primary);">กำลังบันทึกข้อมูล...</span>
   </div>
   <script>
+    // --- เพิ่มไว้ใต้แท็ก <script> ---
+function getDirectImgUrl(driveUrl) {
+  if (!driveUrl || typeof driveUrl !== 'string') return '';
+  // ใช้ Regex ดึง ID ของไฟล์จากลิงก์ Google Drive
+  const match = driveUrl.match(/[-\w]{25,}/);
+  if (match) {
+    // แปลงเป็น Thumbnail URL เพื่อให้ดึงรูปมาโชว์ในแท็ก <img> ได้โดยตรง
+    return 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w200';
+  }
+  return driveUrl;
+}
+
 // ===== MOBILE / EMBED GUARD =====
     // This web app must be opened via the Apps Script Web App URL ending with /exec.
     // If the page is opened as a direct googleusercontent "userCodeAppPanel" URL, or in an in-app browser that blocks the iframe,
@@ -3179,11 +3191,22 @@ function populateMonthFilter() {
         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No data available</td></tr>';
         return;
       }
-      
+
+      // 1. ฟังก์ชันแปลงวันที่ dd/mm/yyyy เป็น Date เพื่อใช้เปรียบเทียบ
+      function parseDate(dateStr) {
+        if (!dateStr) return new Date(0);
+        const p = dateStr.split('/');
+        return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(0);
+      }
+
+      // 2. ทำการเรียงลำดับข้อมูล (Sort) จากวันที่ ใหม่ -> เก่า
+      const sortedDcc = [...reportData.checked.dccData].sort((a, b) => parseDate(b[0]) - parseDate(a[0]));
+
       let html = '';
       let count = 0;
       
-      reportData.checked.dccData.forEach(function(row) {
+      // 🟢 ใช้ sortedDcc อันเดียวเท่านั้น เพื่อให้ตารางเรียงวันที่ล่าสุดขึ้นก่อน
+      sortedDcc.forEach(function(row) { 
         const date = row[0] || '';
         const month = row[1] || '';
         const type = row[5] || '';
@@ -3192,35 +3215,25 @@ function populateMonthFilter() {
         const subfunc = row[8] || '';
         const unitCheck = row[10] || '0';
         const inspector = row[21] || '-';
-        
-        if (filterMonth && month !== filterMonth) return;
-        if (selectedDates.length > 0 && !selectedDates.includes(date)) return;
-        if (selectedTypeFilter !== 'ALL' && type !== selectedTypeFilter) return;
-        if (selectedDeptFilter !== 'ALL' && dept !== selectedDeptFilter) return;
-        if (filterInspector && inspector !== filterInspector) return;
-        
-        const badgeClass = (type === 'PMWI' || type === 'PM/WI') ? 'badge-pmwi' : 'badge-checklist';
-        
-        html += '<tr>';
-        html += '<td>' + date + '</td>';
-        html += '<td><span class="badge ' + badgeClass + '">' + type + '</span></td>';
-        html += '<td>' + dept + '</td>';
-        html += '<td>' + func + '</td>';
-        html += '<td>' + subfunc + '</td>';
-        html += '<td><strong>' + unitCheck + '</strong></td>';
-        html += '<td>' + inspector + '</td>';
-        html += '</tr>';
-        
-        count++;
+
+        // --- ตรงนี้เป็นโค้ด Filter เดิมของท่าน ผจก. ---
+        if ((filterMonth === 'ALL' || month === filterMonth) &&
+            (filterInspector === 'ALL' || inspector === filterInspector)) {
+          count++;
+          html += `<tr>
+            <td>${date}</td>
+            <td>${type}</td>
+            <td>${dept}</td>
+            <td>${func}</td>
+            <td>${subfunc}</td>
+            <td class="text-center">${unitCheck}</td>
+            <td>${inspector}</td>
+          </tr>`;
+        }
       });
       
-      if (count === 0) {
-        html = '<tr><td colspan="7" class="text-center text-muted py-4">No records match filters</td></tr>';
-      }
-      
-      tbody.innerHTML = html;
+      tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted">No matching records</td></tr>';
     }
-
 
     // =========== EXPORT FUNCTIONS ===========
     function exportToExcel() {
@@ -4576,20 +4589,24 @@ function updateKpiCards(monthKey) {
           // Photo icons: แต่ละ icon = 1 รูป กดเปิด Drive โดยตรง
           const allLinks = [r[10],r[11],r[12],r[13]];
           const hasAny   = allLinks.some(v => v && String(v).startsWith('http'));
-          const camBtn   = hasAny
-            ? allLinks.map((url, pi) =>
-                url && String(url).startsWith('http')
-                  ? '<a href="'+url+'" target="_blank" rel="noopener" title="Photo '+(pi+1)+'" '+
-                    'style="display:inline-flex;align-items:center;justify-content:center;'+
-                    'width:26px;height:26px;border-radius:6px;background:#0891b2;color:#fff;'+
-                    'text-decoration:none;margin:1px;font-size:.75rem">'+
-                    '<i class=\"bi bi-camera-fill\"></i></a>'
-                  : '<span title="ไม่มีรูป '+(pi+1)+'" '+
-                    'style="display:inline-flex;align-items:center;justify-content:center;'+
-                    'width:26px;height:26px;border-radius:6px;background:#f1f5f9;color:#cbd5e1;margin:1px;font-size:.75rem">'+
-                    '<i class=\"bi bi-camera\"></i></span>'
-              ).join('')
-            : '<span style="color:#94a3b8;font-size:.78rem">—</span>'
+          const camBtn = hasAny
+            ? allLinks.map((url, pi) => {
+                if (url && String(url).startsWith('http')) {
+                  // 🟢 แปลงเป็นรูปเล็กสำหรับโชว์ในตาราง
+                  const directUrl = getDirectImgUrl(url); 
+                  
+                  // 🟢 ปรับสไตล์: ขยายขนาดรูป, เพิ่ม Hover effect, และเงา
+                  return `<div onclick="openAreaPhotoModal('','','',false,['${url}'])" title="คลิกเพื่อดูรูปใหญ่" 
+                      style="display:inline-block; width:60px; height:60px; margin:2px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; cursor:pointer; background:#f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;"
+                      onmouseover="this.style.transform='scale(1.1)'; this.style.box-shadow='0 4px 8px rgba(0,0,0,0.2)';"
+                      onmouseout="this.style.transform='scale(1)'; this.style.box-shadow='0 2px 4px rgba(0,0,0,0.1)';"
+                      >
+                       <img src="${directUrl}" style="width:100%; height:100%; object-fit:cover;">
+                     </div>`;
+                }
+                return '';
+              }).join('')
+            : '<span style="color:#94a3b8;font-size:.78rem">—</span>';
           return '<tr>' +
             '<td style="font-size:.78rem;white-space:nowrap">'+_aDate(r)+'</td>' +
             '<td style="font-size:.78rem;font-weight:600">'+_aArea(r)+'</td>' +
