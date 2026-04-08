@@ -4749,39 +4749,6 @@ function updateKpiCards(monthKey) {
       // ── Palette: professional & distinct ─────────────────────────
       const pal = ['#1d4ed8','#7c3aed','#0891b2','#059669','#d97706','#be185d','#0369a1','#4f46e5'];
       const TARGET = 5;
-// 🟢 1. คำนวณยอดเงินสูญเสีย (COPQ) และวาดกราฟ
-      let totalLossYTD = 0;
-      const lossTrendData = allMonths.map(m => {
-        const loss = reportData?.summary?.byMonth?.[m]?.financialLoss || 0;
-        totalLossYTD += loss; // บวกสะสมเข้าไป
-        return loss;
-      });
-      
-      // เอาเงินที่บวกสะสม ไปโชว์ที่ป้าย KPI Card ด้านบน
-      const elLoss = document.getElementById('pkpi_loss');
-      if (elLoss) elLoss.textContent = '฿' + totalLossYTD.toLocaleString();
-
-      // 🟢 2. วาดกราฟเส้น Financial Loss Trend
-      _destroyAC('lossTrend');
-      const ctxLoss = document.getElementById('lossTrendChart')?.getContext('2d');
-      if (ctxLoss && lossTrendData.some(v => v > 0)) {
-        _aC['lossTrend'] = createChart(ctxLoss, {
-          type: 'line',
-          data: {
-            labels: allMonths,
-            datasets: [{
-              label: 'Financial Loss (THB)', data: lossTrendData,
-              borderColor: '#dc2626', backgroundColor: 'rgba(220, 38, 38, 0.15)',
-              borderWidth: 3, fill: true, tension: 0.35, pointRadius: 5, pointBackgroundColor: '#dc2626'
-            }]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { callback: v => '฿' + v.toLocaleString() } } },
-            plugins: { tooltip: { callbacks: { label: c => ' ความสูญเสีย: ฿' + c.raw.toLocaleString() } } }
-          }
-        });
-      } else if (ctxLoss) drawNoData('lossTrendChart', 'ไม่มีข้อมูลความสูญเสีย (COPQ = 0)');
 
       // ── Chart 1: Error Rate Trend ─────────────────────────────────
       const errRates = allMonths.map(m=>{
@@ -4908,9 +4875,13 @@ function updateKpiCards(monthKey) {
         });
       } else if(ctxB) drawNoData('deptComparisonChart','ไม่มีข้อมูล');
 
-      // ── Chart 4: Grouped Bar — Error Rate by Dept × Last 6 Months ─
+    // ── Chart 4: Grouped Bar — Error Rate by Dept × Last 6 Months ─
       const topDepts = Object.entries(byDeptMonth)
-        .map(([d,m])=>({d, total:Object.values(m).reduce((s,v)=>s+(v.units>0?v.errors/v.units:0),0)}))
+        .map(([d,m]) => {
+           let sumU = 0, sumE = 0;
+           Object.values(m).forEach(v => { sumU += v.units; sumE += v.errors; });
+           return { d, total: sumU > 0 ? (sumE / sumU) : 0 };
+        })
         .sort((a,b)=>b.total-a.total).slice(0,5).map(x=>x.d);
 
       const groupedDS = topDepts.map((d,i)=>({
