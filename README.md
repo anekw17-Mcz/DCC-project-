@@ -1766,21 +1766,18 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                   </div>
                 </div>
 
-                <div id="smartActionsPanel" class="mb-3"></div>
-                <div id="chronicIssuesPanel" class="mb-4"></div>
-
                 <!-- ROW 1: Error Rate Trend (full width) -->
                 <div class="chart-container mb-3">
                   <div class="chart-title">
                     <i class="bi bi-graph-up-arrow me-2" style="color:#1d4ed8"></i>
-                    Error Rate Trend — รายเดือนทั้งหมด + Target 2% Zone
+                    Error Rate Trend — รายเดือนทั้งหมด + Target 5% Zone
                   </div>
                   <div style="font-size:.72rem;background:#f8faff;border-radius:6px;padding:6px 10px;margin-bottom:8px;color:#475569">
-                    📊 <b>วิเคราะห์:</b> แนวโน้ม Error Rate ย้อนหลัง — เส้นสีน้ำเงิน = Actual | เส้นประ = Moving Avg 3 เดือน | พื้นที่แดง = เกิน Target 2%
+                    📊 <b>วิเคราะห์:</b> แนวโน้ม Error Rate ย้อนหลัง — เส้นสีน้ำเงิน = Actual | เส้นประ = Moving Avg 3 เดือน | พื้นที่แดง = เกิน Target 5%
                     <br>
                     <span style="background:#fee2e2;color:#dc2626;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem">เส้นขึ้น = แย่ลง</span>
                     <span style="background:#d1fae5;color:#065f46;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem;margin-left:4px">เส้นลง = Improvement ✅</span>
-                    <span style="background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem;margin-left:4px">ต่ำกว่าเส้น 2% = ปลอดภัย</span>
+                    <span style="background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:999px;font-weight:700;font-size:.65rem;margin-left:4px">ต่ำกว่าเส้น 5% = ปลอดภัย</span>
                   </div>
                   <div class="chart-canvas-wrap" style="height:200px"><canvas id="errorRateTrendProfChart"></canvas></div>
                   <div class="chart-caption" id="cap_errorRateTrendProfChart"></div>
@@ -2980,7 +2977,7 @@ function setChartTitle(canvasId, text) {
       }
 
       // Target evaluation
-      const target = 2; // 2%
+      const target = 5; // 5%
       const targetText = errRate <= target
         ? `On target: Error Rate ${errRate.toFixed(2)}% ≤ ${target}%`
         : `Above target: Error Rate ${errRate.toFixed(2)}% > ${target}%`;
@@ -3812,7 +3809,7 @@ function renderProfessionalCharts(selectedMonth) {
         { label: 'Trend (3-Month MA)', data: movingAvg,
           borderColor: '#f59e0b', backgroundColor: 'transparent',
           borderWidth: 2.5, pointRadius: 0, tension: 0.4, borderDash: [4,3] },
-        { label: 'Target (2%)', data: last6Months.map(()=>2),
+        { label: 'Target (5%)', data: last6Months.map(()=>5),
           borderColor: '#ef4444', backgroundColor: 'transparent',
           borderWidth: 1.5, pointRadius: 0, borderDash: [8,5] }
       ]
@@ -4605,81 +4602,1499 @@ function updateKpiCards(monthKey) {
     }
     // END renderAreaTrend
 
-   // ── Photo Modal & Export (Unified Version) ──────────────────────────────────────────────────
+    // ── Photo Modal ──────────────────────────────────────────────────
     function openAreaPhotoModal(areaKey, probOrLoc, rowData, isByLoc) {
       const all = _getAreaRows();
       let targetRows;
       if (rowData && Array.isArray(rowData)) {
         targetRows = [rowData];
       } else if (isByLoc) {
+        // จาก heatmap: areaKey=area, probOrLoc=location
         targetRows = all.filter(r => _aArea(r)===areaKey && _aLoc(r)===probOrLoc);
       } else {
         targetRows = all.filter(r => _aArea(r)===areaKey && _aProb(r)===probOrLoc);
       }
-      const modal = document.getElementById('areaPhotoModal'), title = document.getElementById('areaPhotoModalTitle'), info = document.getElementById('areaPhotoModalInfo'), links = document.getElementById('areaPhotoModalLinks');
+      const modal = document.getElementById('areaPhotoModal');
+      const title = document.getElementById('areaPhotoModalTitle');
+      const info  = document.getElementById('areaPhotoModalInfo');
+      const links = document.getElementById('areaPhotoModalLinks');
       if (!modal) return;
       title.textContent = '📍 '+(isByLoc?'Location: ':'')+(probOrLoc||areaKey);
-      info.innerHTML = targetRows.map(r => '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e2e8f0"><b>'+_aDate(r)+'</b> | Area: <b>'+_aArea(r)+'</b> | Location: <b>'+_aLoc(r)+'</b> | Problem: '+_aProb(r)+(_aQty(r)>0?' | QTY: <b style="color:#7c3aed">'+_aQty(r)+'</b>':'')+'</div>').join('');
+      info.innerHTML = targetRows.map(r =>
+        '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">' +
+        '<b>'+_aDate(r)+'</b> | Area: <b>'+_aArea(r)+'</b> | Location: <b>'+_aLoc(r)+'</b>' +
+        ' | Problem: '+_aProb(r)+(_aQty(r)>0?' | QTY: <b style="color:#7c3aed">'+_aQty(r)+'</b>':'') +
+        '</div>'
+      ).join('');
       const allPhotos = targetRows.flatMap(_aPhotos);
-      if (allPhotos.length) {
-        links.innerHTML = allPhotos.map((url,i) => `<a href="${url}" target="_blank" rel="noopener" style="display:inline-block; margin: 0 8px 8px 0; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; box-shadow: 0 3px 6px rgba(0,0,0,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"><img src="${url}" style="height: 150px; min-width: 100px; max-width: 100%; object-fit: cover; display: block;" alt="Photo ${i+1}"></a>`).join('');
-      } else { links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>'; }
+      links.innerHTML = allPhotos.length
+        ? allPhotos.map((url,i) =>
+            '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm" ' +
+            'style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:8px 14px">' +
+            '<i class="bi bi-image me-1"></i>Photo '+(i+1)+'</a>').join('')
+        : '<span class="text-muted">ไม่มีรูปภาพ</span>';
       modal.style.display = 'block';
     }
 
-    function closeAreaPhotoModal() { const m = document.getElementById('areaPhotoModal'); if (m) m.style.display = 'none'; }
+    function closeAreaPhotoModal() {
+      const m = document.getElementById('areaPhotoModal'); if (m) m.style.display='none';
+    }
 
     function exportAreaTrendCSV() {
       const rows = _getAreaRows(); if (!rows.length) { alert('ไม่มีข้อมูล'); return; }
       const hdr = ['Date','Month','Area','Location','Problem','QTY','Photo1','Photo2','Photo3','Photo4'];
-      const csv = [hdr,...rows.map(r=>[_aDate(r),_aMk(_aDate(r)),_aArea(r),_aLoc(r),_aProb(r),_aQty(r),r[10]||'',r[11]||'',r[12]||'',r[13]||''])].map(row=>row.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+      const csv = [hdr,...rows.map(r=>[_aDate(r),_aMk(_aDate(r)),_aArea(r),_aLoc(r),_aProb(r),_aQty(r),
+        r[10]||'',r[11]||'',r[12]||'',r[13]||''])
+      ].map(row=>row.map(c=>'"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
       const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
       const url=URL.createObjectURL(blob); const a=document.createElement('a');
       a.href=url; a.download='Area_'+new Date().toISOString().slice(0,10)+'.csv';
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
-    
+
+
+    // ── Drill-down Photo Modal ───────────────────────────────────
+    function openAreaPhotoModal(areaKey, prob, rowData) {
+      const all  = _getAreaRows();
+      let targetRows;
+
+      if (rowData && Array.isArray(rowData)) {
+        // Single row from table click
+        targetRows = [rowData];
+      } else {
+        // From heatmap: areaKey = area name, prob = problem
+        targetRows = all.filter(r => _aArea(r)===areaKey && _aProb(r)===prob);
+      }
+
+      const modal = document.getElementById('areaPhotoModal');
+      const title = document.getElementById('areaPhotoModalTitle');
+      const info  = document.getElementById('areaPhotoModalInfo');
+      const links = document.getElementById('areaPhotoModalLinks');
+      if (!modal) return;
+
+      title.textContent = '📍 '+prob;
+      info.innerHTML = targetRows.map(r =>
+        '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">' +
+        '<b>'+_aDate(r)+'</b> | Area: <b>'+_aArea(r)+'</b> | Location: '+_aLoc(r)+
+        ((_aQty(r)>0)?' | Quantity: <b style="color:#7c3aed">'+_aQty(r)+'</b>':'')+
+        '</div>'
+      ).join('');
+
+      const allPhotos = targetRows.flatMap(_aPhotos);
+      if (allPhotos.length) {
+        links.innerHTML = allPhotos.map((url,i) =>
+          '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm" ' +
+          'style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:8px 14px">' +
+          '<i class="bi bi-image me-1"></i>Photo '+(i+1)+'</a>'
+        ).join('');
+      } else {
+        links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>';
+      }
+      modal.style.display = 'block';
+    }
+
+    function closeAreaPhotoModal() {
+      const m = document.getElementById('areaPhotoModal');
+      if (m) m.style.display = 'none';
+    }
+
     function renderSummaryCharts(selectedMonth) {
       const typeNow = (selectedTypeFilter && selectedTypeFilter !== 'ALL') ? selectedTypeFilter : 'Checklist';
       const deptNow = (selectedDeptFilter && selectedDeptFilter !== 'ALL') ? selectedDeptFilter : 'ALL';
       if (!reportData?.checked?.dccData?.length) return;
       const data = reportData.checked.dccData;
+
       function normT(t){ t=(t||'').trim(); return t==='PM/WI'?'PMWI':t; }
-      function mkSort(mk){ const mm={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11}; const p=(mk||'').split('-'); return (2000+parseInt(p[1]||0))*12+(mm[p[0]]||0); }
-      const rows = data.filter(r => { const t=normT(r[5]||''), d=(r[6]||'').trim(); return (typeNow==='ALL'||t===typeNow) && (deptNow==='ALL'||d===deptNow); });
-      const allMonths = [...new Set(rows.map(r=>(r[1]||'').trim()).filter(Boolean))].sort((a,b)=>mkSort(a)-mkSort(b));
-      const byMonth = {}; rows.forEach(r=>{ const mk=(r[1]||'').trim(); if(!mk)return; if(!byMonth[mk]) byMonth[mk]={units:0,errors:0,depts:new Set()}; byMonth[mk].units += parseFloat(r[10])||0; byMonth[mk].errors += parseFloat(r[11])||0; byMonth[mk].depts.add((r[6]||'').trim()); });
+      function mkSort(mk){
+        const mm={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        const p=(mk||'').split('-'); return (2000+parseInt(p[1]||0))*12+(mm[p[0]]||0);
+      }
+
+      const rows = data.filter(r => {
+        const t=normT(r[5]||''), d=(r[6]||'').trim();
+        return (typeNow==='ALL'||t===typeNow) && (deptNow==='ALL'||d===deptNow);
+      });
+
+      const allMonths = [...new Set(rows.map(r=>(r[1]||'').trim()).filter(Boolean))]
+        .sort((a,b)=>mkSort(a)-mkSort(b));
+
+      const byMonth = {};
+      rows.forEach(r=>{
+        const mk=(r[1]||'').trim(); if(!mk)return;
+        if(!byMonth[mk]) byMonth[mk]={units:0,errors:0,depts:new Set()};
+        byMonth[mk].units  += parseFloat(r[10])||0;
+        byMonth[mk].errors += parseFloat(r[11])||0;
+        byMonth[mk].depts.add((r[6]||'').trim());
+      });
+
       const selM = selectedMonth || allMonths[allMonths.length-1] || '';
-      const byDept = {}; rows.filter(r=>(r[1]||'').trim()===selM).forEach(r=>{ const d=(r[6]||'').trim()||'Unknown'; if(!byDept[d]) byDept[d]={units:0,errors:0}; byDept[d].units += parseFloat(r[10])||0; byDept[d].errors += parseFloat(r[11])||0; });
+
+      const byDept = {};
+      rows.filter(r=>(r[1]||'').trim()===selM).forEach(r=>{
+        const d=(r[6]||'').trim()||'Unknown';
+        if(!byDept[d]) byDept[d]={units:0,errors:0};
+        byDept[d].units  += parseFloat(r[10])||0;
+        byDept[d].errors += parseFloat(r[11])||0;
+      });
+
       const last6 = allMonths.slice(-6);
-      const byDeptMonth = {}; rows.forEach(r=>{ const d=(r[6]||'').trim()||'Unknown', mk=(r[1]||'').trim(); if(!last6.includes(mk))return; if(!byDeptMonth[d]) byDeptMonth[d]={}; if(!byDeptMonth[d][mk]) byDeptMonth[d][mk]={units:0,errors:0}; byDeptMonth[d][mk].units += parseFloat(r[10])||0; byDeptMonth[d][mk].errors += parseFloat(r[11])||0; });
+      const byDeptMonth = {};
+      rows.forEach(r=>{
+        const d=(r[6]||'').trim()||'Unknown', mk=(r[1]||'').trim();
+        if(!last6.includes(mk))return;
+        if(!byDeptMonth[d]) byDeptMonth[d]={};
+        if(!byDeptMonth[d][mk]) byDeptMonth[d][mk]={units:0,errors:0};
+        byDeptMonth[d][mk].units  += parseFloat(r[10])||0;
+        byDeptMonth[d][mk].errors += parseFloat(r[11])||0;
+      });
+
+      // ── Palette: professional & distinct ─────────────────────────
       const pal = ['#1d4ed8','#7c3aed','#0891b2','#059669','#d97706','#be185d','#0369a1','#4f46e5'];
-      const TARGET = 2;
+      const TARGET = 5;
 
-      // Charts Execution
-      try { renderPresentationKPIs(rows, selM, allMonths, byMonth); } catch(e) {}
-      try { renderParetoChart(rows, selM); } catch(e) {}
-      try { renderWeeklyTrend(rows, selM); } catch(e) {}
-      try { renderRadarScorecard(rows, selM); } catch(e) {}
-      try { renderFuncBreakdown(rows, selM); } catch(e) {}
-      try { renderSubFuncHeatmap(rows, selM); } catch(e) {}
+      // ── Chart 1: Error Rate Trend ─────────────────────────────────
+      const errRates = allMonths.map(m=>{
+        const v=byMonth[m]; return v&&v.units>0?+(v.errors/v.units*100).toFixed(3):0;
+      });
+      const ma3 = errRates.map((_,i)=>{
+        const sl=errRates.slice(Math.max(0,i-2),i+1);
+        return +(sl.reduce((s,v)=>s+v,0)/sl.length).toFixed(3);
+      });
 
-      // AI Logic
-      try {
-        const prevM = allMonths[allMonths.indexOf(selM)-1];
-        const errTypeCnt = {}; rows.filter(r=>(r[1]||'').trim()===selM).forEach(r=>{ [r[12],r[13],r[14],r[15],r[16]].forEach(v=>{ const s=(v||'').toString().trim(); if(s) errTypeCnt[s]=(errTypeCnt[s]||0)+1; }); });
-        const topErr = Object.entries(errTypeCnt).sort((a,b)=>b[1]-a[1])[0];
-        const deptSortedForAction = Object.entries(byDept).map(([d,v])=>({d, rate:v.units>0?+(v.errors/v.units*100).toFixed(2):0})).sort((a,b)=>b.rate-a.rate);
-        const worstDept = deptSortedForAction[0];
-        const smartPanel = document.getElementById('smartActionsPanel');
-        if (smartPanel && rows.length > 0) {
-          let actionsHtml = `<div style="background:linear-gradient(135deg, #1e3a8a, #1d4ed8); padding: 18px; border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(29,78,216,0.2);"><h6 style="font-weight: 800; margin-bottom: 12px; letter-spacing: 0.5px;"><i class="bi bi-robot me-2"></i>AI Action Items</h6><ul style="margin: 0; padding-left: 20px; line-height: 1.6; font-size: 0.85rem;">`;
-          if (worstDept && worstDept.rate > TARGET) { actionsHtml += `<li><b>สั่งการแผนก ${worstDept.d}:</b> Error Rate สูงถึง <span style="color:#fca5a5; font-weight:bold;">${worstDept.rate}%</span></li>`; }
-          if (topErr) { actionsHtml += `<li><b>ทบทวน WI:</b> ปัญหาพบบ่อยที่สุดคือ <b>"${topErr[0]}"</b></li>`; }
-          actionsHtml += `</ul></div>`; smartPanel.innerHTML = actionsHtml;
+      _destroyAC('erTrend');
+      const ctxET = document.getElementById('errorRateTrendProfChart')?.getContext('2d');
+      if(ctxET) _aC['erTrend'] = createChart(ctxET,{
+        type:'line',
+        data:{labels:allMonths, datasets:[
+          {label:'Error Rate (%)', data:errRates,
+           borderColor:'#1d4ed8', backgroundColor:'rgba(29,78,216,0.08)',
+           borderWidth:2.5, fill:true, tension:0.35,
+           pointRadius:errRates.map(v=>v>TARGET?8:5),
+           pointBackgroundColor:errRates.map(v=>v>TARGET?'#dc2626':'#1d4ed8'),
+           pointBorderColor:'#fff', pointBorderWidth:2, order:1},
+          {label:'Moving Avg (3M)', data:ma3,
+           borderColor:'#f59e0b', borderWidth:1.5, borderDash:[6,4],
+           pointRadius:0, fill:false, tension:0.4, order:2},
+          {label:'Target 5%', data:allMonths.map(()=>TARGET),
+           borderColor:'rgba(220,38,38,0.5)', borderWidth:1.5, borderDash:[3,3],
+           pointRadius:0, fill:false, order:3},
+        ]},
+        options:{responsive:true, maintainAspectRatio:false,
+          interaction:{mode:'index', intersect:false},
+          scales:{
+            y:{beginAtZero:true, ticks:{callback:v=>v+'%'},
+               title:{display:true, text:'Error Rate (%)'},
+               grid:{color:'rgba(0,0,0,0.04)'}},
+            x:{grid:{color:'rgba(0,0,0,0.04)'}}
+          },
+          plugins:{
+            legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10, usePointStyle:true}},
+            tooltip:{callbacks:{label:c=>{
+              if(c.datasetIndex===0) return 'Error Rate: '+c.raw+'%'+(c.raw>TARGET?' ⚠️':' ✅');
+              return c.dataset.label+': '+c.raw+'%';
+            }}}
+          }
         }
-      } catch(e) { console.warn("Action Items Error:", e); }
+      });
+
+      // ── Chart 2: Dept Worst→Best horizontal bar ───────────────────
+      const deptSorted = Object.entries(byDept)
+        .map(([d,v])=>({d, rate:v.units>0?+(v.errors/v.units*100).toFixed(2):0, units:v.units, errors:v.errors}))
+        .sort((a,b)=>b.rate-a.rate);
+
+      _destroyAC('deptPerf');
+      const ctxDP = document.getElementById('topDepartmentsChart')?.getContext('2d');
+      if(ctxDP && deptSorted.length){
+        const barColors = deptSorted.map(d=>
+          d.rate>TARGET ? '#ef4444' : d.rate>TARGET*0.6 ? '#f59e0b' : '#10b981'
+        );
+        _aC['deptPerf'] = createChart(ctxDP,{
+          type:'bar',
+          data:{labels:deptSorted.map(d=>d.d), datasets:[
+            {label:'Error Rate (%)', data:deptSorted.map(d=>d.rate),
+             backgroundColor:barColors.map(c=>c+'cc'),
+             borderColor:barColors, borderWidth:1.5, borderRadius:5},
+            {type:'line', label:'Target 5%', data:deptSorted.map(()=>TARGET),
+             borderColor:'rgba(220,38,38,0.7)', borderWidth:1.5, borderDash:[5,4],
+             pointRadius:0, fill:false}
+          ]},
+          options:{responsive:true, maintainAspectRatio:false, indexAxis:'y',
+            scales:{
+              x:{beginAtZero:true, ticks:{callback:v=>v+'%'}, grid:{color:'rgba(0,0,0,0.04)'}},
+              y:{ticks:{font:{size:11}}}
+            },
+            plugins:{legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10}},
+              tooltip:{callbacks:{label:c=>c.datasetIndex===0?c.label+': '+c.raw+'%'+(c.raw>TARGET?' ⚠️':'  ✅'):''}}
+            }
+          }
+        });
+      } else if(ctxDP) drawNoData('topDepartmentsChart','ไม่มีข้อมูล Dept');
+
+      // ── Chart 3: Bubble — Coverage vs Error Rate ──────────────────
+      // x = error rate %, y = units checked (แสดง volume), r = relative size
+      const maxU = Math.max(...deptSorted.map(d=>d.units), 1);
+      const bubbleDS = deptSorted.map((d,i)=>({
+        label: d.d,
+        data:[{
+          x: d.rate,
+          y: d.units,
+          r: Math.max(6, Math.min(30, (d.units/maxU)*30))
+        }],
+        backgroundColor: (d.rate>TARGET
+          ? 'rgba(239,68,68,0.65)'
+          : d.rate>TARGET*0.6
+            ? 'rgba(245,158,11,0.65)'
+            : 'rgba(16,185,129,0.65)'),
+        borderColor: d.rate>TARGET ? '#dc2626' : d.rate>TARGET*0.6 ? '#f59e0b' : '#059669',
+        borderWidth: 2
+      }));
+
+      _destroyAC('bubble');
+      const ctxB = document.getElementById('deptComparisonChart')?.getContext('2d');
+      if(ctxB && bubbleDS.length){
+        _aC['bubble'] = createChart(ctxB,{
+          type:'bubble',
+          data:{datasets: bubbleDS},
+          options:{responsive:true, maintainAspectRatio:false,
+            scales:{
+              x:{title:{display:true, text:'Error Rate (%)'},
+                 beginAtZero:true, ticks:{callback:v=>v+'%'},
+                 grid:{color:'rgba(0,0,0,0.04)'}},
+              y:{title:{display:true, text:'Units Checked'},
+                 beginAtZero:true, grid:{color:'rgba(0,0,0,0.04)'}}
+            },
+            plugins:{
+              legend:{position:'bottom', labels:{font:{size:10}, boxWidth:8, usePointStyle:true}},
+              tooltip:{callbacks:{
+                label:c=>{
+                  const d=deptSorted[c.datasetIndex];
+                  if(!d)return '';
+                  return [d.d, 'Error Rate: '+d.rate+'%'+(d.rate>TARGET?' ⚠️':' ✅'), 'Units: '+d.units.toLocaleString()];
+                }
+              }}
+            }
+          }
+        });
+      } else if(ctxB) drawNoData('deptComparisonChart','ไม่มีข้อมูล');
+
+      // ── Chart 4: Grouped Bar — Error Rate by Dept × Last 6 Months ─
+      const topDepts = Object.entries(byDeptMonth)
+        .map(([d,m])=>({d, total:Object.values(m).reduce((s,v)=>s+(v.units>0?v.errors/v.units:0),0)}))
+        .sort((a,b)=>b.total-a.total).slice(0,5).map(x=>x.d);
+
+      const groupedDS = topDepts.map((d,i)=>({
+        label: d,
+        data: last6.map(m=>{
+          const v=byDeptMonth[d]?.[m];
+          return v&&v.units>0?+(v.errors/v.units*100).toFixed(2):0;
+        }),
+        backgroundColor: pal[i]+'bb',
+        borderColor: pal[i],
+        borderWidth: 1.5, borderRadius: 4
+      }));
+
+      _destroyAC('grouped');
+      const ctxG = document.getElementById('errorTrendChart')?.getContext('2d');
+      if(ctxG && groupedDS.length){
+        _aC['grouped'] = createChart(ctxG,{
+          type:'bar',
+          data:{labels:last6, datasets:groupedDS},
+          options:{responsive:true, maintainAspectRatio:false,
+            interaction:{mode:'index', intersect:false},
+            scales:{
+              y:{beginAtZero:true, ticks:{callback:v=>v+'%'},
+                 title:{display:true, text:'Error Rate (%)'},
+                 grid:{color:'rgba(0,0,0,0.04)'}},
+              x:{ticks:{font:{size:10}}}
+            },
+            plugins:{legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10}},
+              tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'+(parseFloat(c.raw)>TARGET?' ⚠️':'')}}
+            }
+          }
+        });
+      } else if(ctxG) drawNoData('errorTrendChart','ไม่มีข้อมูล');
+
+      // ── Chart 5: Completion Stacked Bar ───────────────────────────
+      const masterArr = reportData?.masterData || [];
+      const planByDept = {};
+      masterArr.forEach(r=>{
+        if(normT(r[0]||'')===typeNow){
+          const d=(r[1]||'').trim();
+          planByDept[d]=(planByDept[d]||0)+(parseFloat(r[4])||0);
+        }
+      });
+      const compDepts    = [...new Set([...Object.keys(byDept), ...Object.keys(planByDept)])];
+      const compChecked  = compDepts.map(d=>byDept[d]?.units||0);
+      const compRemain   = compDepts.map((d,i)=>Math.max(0,(planByDept[d]||0)-compChecked[i]));
+
+      _destroyAC('compl');
+      const ctxC = document.getElementById('completionChart')?.getContext('2d');
+      if(ctxC && compDepts.length){
+        _aC['compl'] = createChart(ctxC,{
+          type:'bar',
+          data:{labels:compDepts, datasets:[
+            {label:'Checked', data:compChecked, backgroundColor:'rgba(14,165,233,0.8)', borderRadius:4},
+            {label:'Remaining', data:compRemain, backgroundColor:'rgba(239,68,68,0.5)', borderRadius:4}
+          ]},
+          options:{responsive:true, maintainAspectRatio:false,
+            scales:{
+              x:{stacked:true, ticks:{font:{size:10}}},
+              y:{stacked:true, beginAtZero:true, title:{display:true, text:'Units'}}
+            },
+            plugins:{legend:{position:'bottom', labels:{font:{size:10}, boxWidth:10}}}
+          }
+        });
+      } else if(ctxC) drawNoData('completionChart','ไม่มีข้อมูล Plan');
+
+      // ── NEW: Advanced Analytics Charts ──────────────────────────
+      try { renderPresentationKPIs(rows, selM, allMonths, byMonth); } catch(e) { console.warn('KPI Banner err',e); }
+      try { renderParetoChart(rows, selM); } catch(e) { console.warn('Pareto err',e); }
+      try { renderWeeklyTrend(rows, selM); } catch(e) { console.warn('Weekly err',e); }
+      try { renderRadarScorecard(rows, selM); } catch(e) { console.warn('Radar err',e); }
+      try { renderFuncBreakdown(rows, selM); } catch(e) { console.warn('FuncBreak err',e); }
+      try { renderSubFuncHeatmap(rows, selM); } catch(e) { console.warn('Heatmap err',e); }
     }
+
+
+
+/* ===== Ultra-light Chart fallback (no external CDN needed) =====
+   If Chart.js fails to load (corporate firewall / SSL inspection),
+   this stub renders basic line / bar / scatter charts on <canvas>.
+*/
+(function(){
+  if (window.Chart) return;
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ProChart — Full-featured chart engine supporting:
+  // line, bar, horizontalBar, radar, bubble, scatter, mixed (bar+line)
+  // ═══════════════════════════════════════════════════════════════════
+
+  const PAL = ['#1d4ed8','#dc2626','#059669','#f59e0b','#7c3aed','#0891b2','#be185d','#d97706','#4f46e5','#0369a1'];
+  const GRID = 'rgba(0,0,0,0.06)';
+  const FONT = '11px "Noto Sans Thai",sans-serif';
+
+  function getCtx(c){ return (c && c.getContext) ? c : (c ? c.getContext('2d') : null); }
+
+  function resolveColor(clr, i){
+    if(Array.isArray(clr)) return clr[i] || PAL[i%PAL.length];
+    return clr || PAL[i%PAL.length];
+  }
+
+  function textWidth(ctx2d, txt){ ctx2d.font=FONT; return ctx2d.measureText(String(txt)).width; }
+
+  // ── Layout helpers ──────────────────────────────────────────────
+  function makeBox(c, labels, datasets, opts){
+    const pad = {t:20, r:20, b:50, l:55};
+    // detect y2 axis
+    if(datasets.some(d=>d.yAxisID==='y2')) pad.r = 55;
+    // horizontal bar needs more left padding for labels
+    if((opts.indexAxis==='y') || datasets.some(d=>d.type==='horizontalBar')){
+      const maxLbl = Math.max(...labels.map(l=>textWidth({font:'',measureText:(s)=>({width:s.length*6.5})}, l)));
+      pad.l = Math.min(160, Math.max(70, maxLbl+10));
+    }
+    return { l:pad.l, r:pad.r, t:pad.t, b:pad.b,
+      W: c.width-pad.l-pad.r,
+      H: c.height-pad.t-pad.b };
+  }
+
+  function scaleX(box, i, n){ return box.l + (n<=1?box.W/2:box.W*i/(n-1)); }
+  function scaleXb(box, i, n){ return box.l + box.W*i/n; }
+  function scaleY(box, v, mn, mx){ if(mx===mn) return box.t+box.H/2; return box.t+box.H*(1-(v-mn)/(mx-mn)); }
+
+  function drawGrid(ctx2d, box, steps, mn, mx, label2fn){
+    ctx2d.save();
+    ctx2d.strokeStyle=GRID; ctx2d.lineWidth=1; ctx2d.setLineDash([]);
+    ctx2d.fillStyle='#64748b'; ctx2d.font=FONT; ctx2d.textAlign='right'; ctx2d.textBaseline='middle';
+    for(let i=0;i<=steps;i++){
+      const v = mn + (mx-mn)*i/steps;
+      const y = scaleY(box, v, mn, mx);
+      ctx2d.beginPath(); ctx2d.moveTo(box.l, y); ctx2d.lineTo(box.l+box.W, y); ctx2d.stroke();
+      ctx2d.fillText(label2fn ? label2fn(v) : (Math.abs(v)>=1000?(v/1000).toFixed(1)+'k':v.toFixed(v<1&&v>0?2:0)), box.l-4, y);
+    }
+    ctx2d.restore();
+  }
+
+  function drawXLabels(ctx2d, box, labels){
+    ctx2d.save();
+    ctx2d.fillStyle='#64748b'; ctx2d.font=FONT; ctx2d.textAlign='center'; ctx2d.textBaseline='top';
+    const n = labels.length;
+    labels.forEach((lab,i)=>{
+      const x = box.l + box.W*(i+0.5)/n;
+      const txt = String(lab);
+      const maxW = box.W/n - 2;
+      const truncated = textWidth(ctx2d, txt) > maxW ? txt.slice(0, Math.floor(maxW/5.5))+'…' : txt;
+      ctx2d.fillText(truncated, x, box.t+box.H+4);
+    });
+    ctx2d.restore();
+  }
+
+  function drawLegend(ctx2d, c, datasets){
+    ctx2d.save();
+    ctx2d.font=FONT; ctx2d.textBaseline='middle';
+    let x = 10, y = c.height-14;
+    datasets.forEach((ds,i)=>{
+      const clr = resolveColor(ds.borderColor||ds.backgroundColor, 0);
+      const lbl = ds.label||'';
+      if(!lbl) return;
+      ctx2d.fillStyle = clr;
+      if(ds.type==='line'||(!ds.type&&datasets[0]?.type==='line')){
+        ctx2d.fillRect(x, y-4, 18, 3);
+      } else {
+        ctx2d.fillRect(x, y-5, 10, 10);
+      }
+      ctx2d.fillStyle='#374151'; ctx2d.fillText(lbl, x+14, y);
+      x += textWidth(ctx2d, lbl)+30;
+      if(x > c.width-50){ x=10; y-=16; }
+    });
+    ctx2d.restore();
+  }
+
+  // ── Line chart ────────────────────────────────────────────────────
+  function drawLineChart(ctx2d, cfg){
+    const c = ctx2d.canvas;
+    const data = cfg.data||{};
+    const labels = data.labels||[];
+    const datasets = data.datasets||[];
+    const opts = cfg.options||{};
+    const box = makeBox(c, labels, datasets, opts);
+
+    // collect all values for y-scale
+    const allVals = datasets.filter(d=>!d.yAxisID||d.yAxisID==='y')
+      .flatMap(d=>d.data||[]).map(Number).filter(v=>!isNaN(v));
+    const allVals2 = datasets.filter(d=>d.yAxisID==='y2')
+      .flatMap(d=>d.data||[]).map(Number).filter(v=>!isNaN(v));
+
+    const yMin = Math.min(0,...allVals);
+    const yMax = Math.max(1,...allVals);
+    const y2Min = allVals2.length ? Math.min(0,...allVals2) : 0;
+    const y2Max = allVals2.length ? Math.max(1,...allVals2) : 100;
+
+    drawGrid(ctx2d, box, 5, yMin, yMax, opts.scales?.y?.ticks?.callback);
+
+    // draw target lines or custom horizontal lines
+    (cfg._hlines||[]).forEach(hl=>{
+      ctx2d.save();
+      ctx2d.strokeStyle=hl.color||'rgba(220,38,38,.5)';
+      ctx2d.lineWidth=1.5;
+      ctx2d.setLineDash([4,3]);
+      const y = scaleY(box, hl.value, yMin, yMax);
+      ctx2d.beginPath(); ctx2d.moveTo(box.l,y); ctx2d.lineTo(box.l+box.W,y); ctx2d.stroke();
+      ctx2d.fillStyle=hl.color||'#dc2626'; ctx2d.font='9px sans-serif'; ctx2d.textAlign='right';
+      ctx2d.fillText(hl.label||'', box.l+box.W-2, y-3);
+      ctx2d.restore();
+    });
+
+    datasets.forEach((ds,di)=>{
+      const vals = (ds.data||[]).map(Number);
+      const isY2 = ds.yAxisID==='y2';
+      const mn = isY2?y2Min:yMin, mx = isY2?y2Max:yMax;
+      const clr = resolveColor(ds.borderColor, di);
+      const n = labels.length;
+
+      ctx2d.save();
+      ctx2d.strokeStyle=clr; ctx2d.lineWidth=ds.borderWidth||2;
+      if(ds.borderDash) ctx2d.setLineDash(ds.borderDash); else ctx2d.setLineDash([]);
+
+      if(ds.fill){
+        ctx2d.beginPath();
+        vals.forEach((v,i)=>{
+          const x=scaleX(box,i,n), y=scaleY(box,v,mn,mx);
+          i===0?ctx2d.moveTo(x,y):ctx2d.lineTo(x,y);
+        });
+        ctx2d.lineTo(scaleX(box,vals.length-1,n), box.t+box.H);
+        ctx2d.lineTo(scaleX(box,0,n), box.t+box.H);
+        ctx2d.closePath();
+        const fillClr = ds.backgroundColor||clr.replace(')',',0.1)').replace('rgb','rgba');
+        ctx2d.fillStyle=fillClr; ctx2d.fill();
+      }
+
+      ctx2d.beginPath();
+      vals.forEach((v,i)=>{
+        const x=scaleX(box,i,n), y=scaleY(box,v,mn,mx);
+        i===0?ctx2d.moveTo(x,y):ctx2d.lineTo(x,y);
+      });
+      ctx2d.stroke();
+
+      // points
+      const ptR = ds.pointRadius!==undefined ? (Array.isArray(ds.pointRadius)?null:ds.pointRadius) : 4;
+      vals.forEach((v,i)=>{
+        const r = Array.isArray(ds.pointRadius) ? ds.pointRadius[i] : (ptR||4);
+        if(r===0) return;
+        const x=scaleX(box,i,n), y=scaleY(box,v,mn,mx);
+        const ptClr = Array.isArray(ds.pointBackgroundColor)?ds.pointBackgroundColor[i]:(ds.pointBackgroundColor||clr);
+        ctx2d.beginPath(); ctx2d.arc(x,y,r,0,Math.PI*2);
+        ctx2d.fillStyle=ptClr; ctx2d.fill();
+        if(ds.pointBorderWidth){ctx2d.strokeStyle='#fff';ctx2d.lineWidth=ds.pointBorderWidth;ctx2d.stroke();}
+      });
+      ctx2d.restore();
+    });
+
+    // X labels
+    ctx2d.save();
+    ctx2d.fillStyle='#64748b'; ctx2d.font=FONT; ctx2d.textAlign='center'; ctx2d.textBaseline='top';
+    labels.forEach((lab,i)=>{
+      const x=scaleX(box,i,labels.length);
+      const txt=String(lab); const maxW=box.W/Math.max(labels.length,1)*2;
+      const tr=textWidth(ctx2d,txt)>maxW?txt.slice(0,Math.floor(maxW/5.5))+'…':txt;
+      ctx2d.fillText(tr, x, box.t+box.H+4);
+    });
+    ctx2d.restore();
+
+    // Y2 labels
+    if(allVals2.length){
+      ctx2d.save();
+      ctx2d.fillStyle='#7c3aed'; ctx2d.font=FONT; ctx2d.textAlign='left'; ctx2d.textBaseline='middle';
+      for(let i=0;i<=5;i++){
+        const v=y2Min+(y2Max-y2Min)*i/5;
+        const y=scaleY(box,v,y2Min,y2Max);
+        const lbl2fn = opts.scales?.y2?.ticks?.callback;
+        ctx2d.fillText(lbl2fn?lbl2fn(v):v.toFixed(0)+'%', box.l+box.W+4, y);
+      }
+      ctx2d.restore();
+    }
+
+    drawLegend(ctx2d, c, datasets);
+  }
+
+  // ── Bar chart (vertical + mixed) ──────────────────────────────────
+  function drawBarChart(ctx2d, cfg){
+    const c = ctx2d.canvas;
+    const data = cfg.data||{};
+    const labels = data.labels||[];
+    const datasets = data.datasets||[];
+    const opts = cfg.options||{};
+    const isHoriz = opts.indexAxis==='y';
+
+    if(isHoriz){ drawHBarChart(ctx2d, cfg); return; }
+
+    const box = makeBox(c, labels, datasets, opts);
+    const barDS = datasets.filter(d=>!d.type||d.type==='bar');
+    const lineDS = datasets.filter(d=>d.type==='line');
+
+    const allVals = barDS.flatMap(d=>d.data||[]).map(Number).filter(v=>!isNaN(v));
+    const allVals2 = datasets.filter(d=>d.yAxisID==='y2').flatMap(d=>d.data||[]).map(Number).filter(v=>!isNaN(v));
+    const yMin=0, yMax=Math.max(1,...allVals);
+    const y2Min=allVals2.length?Math.min(0,...allVals2):0;
+    const y2Max=allVals2.length?Math.max(1,...allVals2):100;
+
+    drawGrid(ctx2d, box, 5, yMin, yMax, opts.scales?.y?.ticks?.callback);
+
+    const n=labels.length, gW=box.W/Math.max(n,1);
+    const bCnt=barDS.length, bW=gW*0.7/Math.max(bCnt,1), bOff=gW*0.15;
+
+    barDS.forEach((ds,bi)=>{
+      (ds.data||[]).forEach((v,i)=>{
+        const val=Number(v)||0;
+        const x=box.l+i*gW+bOff+bi*bW;
+        const y=scaleY(box,val,yMin,yMax);
+        const h=(box.t+box.H)-y;
+        const clr=resolveColor(ds.backgroundColor,i);
+        ctx2d.fillStyle=clr; ctx2d.fillRect(x,y,Math.max(bW-2,2),Math.max(h,1));
+        // ── Value label บนยอดแท่ง ──────────────────────────────────
+        if(val!==0){
+          const lyfn=opts.scales?.y?.ticks?.callback;
+          const lbl=lyfn?lyfn(val):(val<1&&val>0?val.toFixed(2):val%1===0?val.toFixed(0):val.toFixed(1));
+          ctx2d.save();
+          ctx2d.fillStyle='#374151'; ctx2d.font='bold 10px "Noto Sans Thai",sans-serif';
+          ctx2d.textAlign='center'; ctx2d.textBaseline='bottom';
+          ctx2d.fillText(lbl, x+Math.max(bW-2,2)/2, y-2);
+          ctx2d.restore();
+        }
+      });
+    });
+
+    // target/reference lines from datasets
+    lineDS.forEach((ds,li)=>{
+      const vals=(ds.data||[]).map(Number);
+      const isY2=ds.yAxisID==='y2';
+      const mn=isY2?y2Min:yMin, mx=isY2?y2Max:yMax;
+      const clr=resolveColor(ds.borderColor,li+barDS.length);
+      ctx2d.save();
+      ctx2d.strokeStyle=clr; ctx2d.lineWidth=ds.borderWidth||1.5;
+      if(ds.borderDash) ctx2d.setLineDash(ds.borderDash); else ctx2d.setLineDash([]);
+      ctx2d.beginPath();
+      vals.forEach((v,i)=>{
+        const x=box.l+i*gW+gW/2, y=scaleY(box,v,mn,mx);
+        i===0?ctx2d.moveTo(x,y):ctx2d.lineTo(x,y);
+      });
+      ctx2d.stroke();
+      if(ds.pointRadius!==0){
+        vals.forEach((v,i)=>{
+          const x=box.l+i*gW+gW/2, y=scaleY(box,v,mn,mx);
+          ctx2d.beginPath(); ctx2d.arc(x,y,3,0,Math.PI*2);
+          ctx2d.fillStyle=resolveColor(ds.pointBackgroundColor||ds.borderColor,li+barDS.length);
+          ctx2d.fill();
+        });
+      }
+      ctx2d.restore();
+    });
+
+    // Y2 right axis
+    if(allVals2.length){
+      ctx2d.save();
+      ctx2d.fillStyle='#7c3aed'; ctx2d.font=FONT; ctx2d.textAlign='left'; ctx2d.textBaseline='middle';
+      for(let i=0;i<=5;i++){
+        const v=y2Min+(y2Max-y2Min)*i/5;
+        const y=scaleY(box,v,y2Min,y2Max);
+        const lbl2fn=opts.scales?.y2?.ticks?.callback;
+        ctx2d.fillText(lbl2fn?lbl2fn(v):v.toFixed(0)+'%', box.l+box.W+4, y);
+      }
+      ctx2d.restore();
+    }
+
+    drawXLabels(ctx2d, box, labels);
+    drawLegend(ctx2d, c, datasets);
+  }
+
+  // ── Horizontal Bar chart ─────────────────────────────────────────
+  function drawHBarChart(ctx2d, cfg){
+    const c = ctx2d.canvas;
+    const data = cfg.data||{};
+    const labels = data.labels||[];
+    const datasets = data.datasets||[];
+    const opts = cfg.options||{};
+    const box = makeBox(c, labels, datasets, opts);
+
+    const barDS = datasets.filter(d=>!d.type||d.type==='bar');
+    const lineDS = datasets.filter(d=>d.type==='line');
+    const allVals = barDS.flatMap(d=>d.data||[]).map(Number).filter(v=>!isNaN(v));
+    const xMin=0, xMax=Math.max(1,...allVals);
+
+    // Grid (vertical lines for horizontal bar)
+    const steps=4;
+    ctx2d.save();
+    ctx2d.strokeStyle=GRID; ctx2d.lineWidth=1;
+    ctx2d.fillStyle='#64748b'; ctx2d.font=FONT; ctx2d.textAlign='center'; ctx2d.textBaseline='top';
+    for(let i=0;i<=steps;i++){
+      const v=xMin+(xMax-xMin)*i/steps;
+      const x=box.l+box.W*i/steps;
+      ctx2d.beginPath(); ctx2d.moveTo(x,box.t); ctx2d.lineTo(x,box.t+box.H); ctx2d.stroke();
+      const lxfn=opts.scales?.x?.ticks?.callback;
+      ctx2d.fillText(lxfn?lxfn(v):v.toFixed(v<1&&v>0?1:0), x, box.t+box.H+4);
+    }
+    ctx2d.restore();
+
+    // Y labels (left side)
+    const n=labels.length;
+    const bH=box.H/Math.max(n,1)*0.65, bOff=box.H/Math.max(n,1)*0.175;
+    ctx2d.save();
+    ctx2d.fillStyle='#374151'; ctx2d.font=FONT; ctx2d.textAlign='right'; ctx2d.textBaseline='middle';
+    labels.forEach((lab,i)=>{
+      const y=box.t+i*(box.H/n)+box.H/n/2;
+      const txt=String(lab);
+      const maxW=box.l-8;
+      const tr=textWidth(ctx2d,txt)>maxW?txt.slice(0,Math.floor(maxW/5.5))+'…':txt;
+      ctx2d.fillText(tr, box.l-6, y);
+    });
+    ctx2d.restore();
+
+    // Bars
+    barDS.forEach((ds,bi)=>{
+      (ds.data||[]).forEach((v,i)=>{
+        const val=Number(v)||0;
+        const y=box.t+i*(box.H/n)+bOff;
+        const w=(val-xMin)/(xMax-xMin)*box.W;
+        const clr=resolveColor(ds.backgroundColor,i);
+        ctx2d.fillStyle=clr;
+        // rounded right edge
+        const r=Math.min(4, w/2);
+        if(w>0){
+          ctx2d.beginPath();
+          ctx2d.roundRect?ctx2d.roundRect(box.l,y,w,bH,r):ctx2d.fillRect(box.l,y,w,bH);
+          ctx2d.fill();
+        }
+        // ── Value label: inside bar ถ้าพอ, นอกแท่งถ้าไม่พอ ──────────
+        const lxfn=opts.scales?.x?.ticks?.callback;
+        const lbl=lxfn?lxfn(val):(val<1&&val>0?val.toFixed(2)+'':val%1===0?val.toFixed(0):val.toFixed(1));
+        ctx2d.save();
+        ctx2d.font='bold 10.5px "Noto Sans Thai",sans-serif';
+        ctx2d.textBaseline='middle';
+        const lblW=ctx2d.measureText(lbl).width;
+        const minInside=lblW+8;
+        if(w>=minInside){
+          // inside bar: สีขาวหรือเข้มตาม bg
+          ctx2d.fillStyle='rgba(255,255,255,0.92)';
+          ctx2d.textAlign='right';
+          ctx2d.fillText(lbl, box.l+w-5, y+bH/2);
+        } else {
+          // outside bar
+          ctx2d.fillStyle='#374151';
+          ctx2d.textAlign='left';
+          ctx2d.fillText(lbl, box.l+w+4, y+bH/2);
+        }
+        ctx2d.restore();
+      });
+    });
+
+    // Target line (from lineDS)
+    lineDS.forEach((ds)=>{
+      if(!ds.data||!ds.data[0]) return;
+      const v=Number(ds.data[0]);
+      const x=box.l+(v-xMin)/(xMax-xMin)*box.W;
+      ctx2d.save();
+      ctx2d.strokeStyle=resolveColor(ds.borderColor,0); ctx2d.lineWidth=1.5;
+      if(ds.borderDash) ctx2d.setLineDash(ds.borderDash);
+      ctx2d.beginPath(); ctx2d.moveTo(x,box.t); ctx2d.lineTo(x,box.t+box.H); ctx2d.stroke();
+      ctx2d.restore();
+    });
+
+    drawLegend(ctx2d, c, datasets);
+  }
+
+  // ── Radar / Spider chart ──────────────────────────────────────────
+  function drawRadarChart(ctx2d, cfg){
+    const c = ctx2d.canvas;
+    const data = cfg.data||{};
+    const labels = data.labels||[];
+    const datasets = data.datasets||[];
+    const n = labels.length;
+    if(!n) return;
+
+    const cx=c.width/2, cy=c.height/2-10;
+    const r=Math.min(c.width,c.height)/2-50;
+
+    function angle(i){ return Math.PI*2*i/n - Math.PI/2; }
+    function pt(i,val,mx){ const a=angle(i), rv=r*val/mx; return {x:cx+rv*Math.cos(a), y:cy+rv*Math.sin(a)}; }
+
+    // Grid rings
+    ctx2d.save();
+    ctx2d.strokeStyle=GRID; ctx2d.lineWidth=1; ctx2d.fillStyle='#9ca3af'; ctx2d.font='9px sans-serif'; ctx2d.textAlign='center';
+    [20,40,60,80,100].forEach(ring=>{
+      ctx2d.beginPath();
+      labels.forEach((l,i)=>{ const p=pt(i,ring,100); i===0?ctx2d.moveTo(p.x,p.y):ctx2d.lineTo(p.x,p.y); });
+      ctx2d.closePath(); ctx2d.stroke();
+      ctx2d.fillText(ring+'%', cx+4, cy-r*ring/100+4);
+    });
+    // Spokes
+    labels.forEach((l,i)=>{
+      const p=pt(i,100,100);
+      ctx2d.beginPath(); ctx2d.moveTo(cx,cy); ctx2d.lineTo(p.x,p.y); ctx2d.stroke();
+      // Label
+      ctx2d.fillStyle='#374151'; ctx2d.font=FONT;
+      const lp=pt(i,115,100);
+      const align=lp.x<cx-5?'right':lp.x>cx+5?'left':'center';
+      ctx2d.textAlign=align; ctx2d.fillText(String(l), lp.x, lp.y);
+    });
+    ctx2d.restore();
+
+    // Datasets
+    datasets.forEach((ds,di)=>{
+      const vals=(ds.data||[]).map(Number);
+      const mx=100;
+      const clr=resolveColor(ds.borderColor,di);
+      const fill=ds.backgroundColor||clr.replace(')',',0.15)').replace('rgb','rgba');
+
+      ctx2d.save();
+      ctx2d.strokeStyle=clr; ctx2d.lineWidth=ds.borderWidth||2;
+      ctx2d.fillStyle=fill;
+      ctx2d.beginPath();
+      vals.forEach((v,i)=>{ const p=pt(i,v,mx); i===0?ctx2d.moveTo(p.x,p.y):ctx2d.lineTo(p.x,p.y); });
+      ctx2d.closePath(); ctx2d.fill(); ctx2d.stroke();
+      // Points
+      vals.forEach((v,i)=>{
+        const p=pt(i,v,mx);
+        ctx2d.beginPath(); ctx2d.arc(p.x,p.y,3.5,0,Math.PI*2);
+        ctx2d.fillStyle=clr; ctx2d.fill();
+      });
+      ctx2d.restore();
+    });
+
+    drawLegend(ctx2d, c, datasets);
+  }
+
+  // ── Bubble chart ─────────────────────────────────────────────────
+  function drawBubbleChart(ctx2d, cfg){
+    const c = ctx2d.canvas;
+    const data = cfg.data||{};
+    const datasets = data.datasets||[];
+    const opts = cfg.options||{};
+    const box = makeBox(c, [], datasets, opts);
+
+    const allX=datasets.flatMap(d=>(d.data||[]).map(p=>Number(p.x))).filter(v=>!isNaN(v));
+    const allY=datasets.flatMap(d=>(d.data||[]).map(p=>Number(p.y))).filter(v=>!isNaN(v));
+    const xMin=Math.min(0,...allX), xMax=Math.max(1,...allX);
+    const yMin=Math.min(0,...allY), yMax=Math.max(1,...allY);
+
+    drawGrid(ctx2d, box, 5, yMin, yMax, opts.scales?.y?.ticks?.callback);
+
+    // X axis
+    ctx2d.save();
+    ctx2d.fillStyle='#64748b'; ctx2d.font=FONT; ctx2d.textAlign='center'; ctx2d.textBaseline='top';
+    for(let i=0;i<=4;i++){
+      const v=xMin+(xMax-xMin)*i/4;
+      const x=box.l+box.W*i/4;
+      const lxfn=opts.scales?.x?.ticks?.callback;
+      ctx2d.fillText(lxfn?lxfn(v):v.toFixed(0), x, box.t+box.H+4);
+    }
+    ctx2d.restore();
+
+    datasets.forEach((ds,di)=>{
+      (ds.data||[]).forEach(p=>{
+        const x=box.l+(Number(p.x)-xMin)/(xMax-xMin)*box.W;
+        const y=scaleY(box,Number(p.y),yMin,yMax);
+        const r=Math.max(4,Math.min(30,Number(p.r)||8));
+        const clr=Array.isArray(ds.backgroundColor)?ds.backgroundColor[0]:(ds.backgroundColor||PAL[di%PAL.length]);
+        ctx2d.beginPath(); ctx2d.arc(x,y,r,0,Math.PI*2);
+        ctx2d.fillStyle=clr; ctx2d.fill();
+        if(ds.borderColor){ ctx2d.strokeStyle=Array.isArray(ds.borderColor)?ds.borderColor[0]:ds.borderColor; ctx2d.lineWidth=ds.borderWidth||1.5; ctx2d.stroke(); }
+      });
+    });
+
+    drawLegend(ctx2d, c, datasets);
+  }
+
+  // ── Doughnut / Pie chart ─────────────────────────────────────────
+  function drawDoughnutChart(ctx2d, cfg){
+    const c = ctx2d.canvas;
+    const data = cfg.data||{};
+    const labels = data.labels||[];
+    const datasets = data.datasets||[];
+    const opts = cfg.options||{};
+    const isPie = (cfg.type||'').toLowerCase()==='pie';
+    const ds = datasets[0]||{};
+    // จับคู่ labels กับ vals (กรอง val=0 แต่เก็บ index ไว้)
+    const rawVals = (ds.data||[]).map(Number);
+    const items = rawVals.map((v,i)=>({v,i,label:labels[i]||''})).filter(it=>!isNaN(it.v)&&it.v>0);
+    if(!items.length) return;
+
+    const total = items.reduce((s,it)=>s+it.v, 0);
+    const colors = Array.isArray(ds.backgroundColor) ? ds.backgroundColor : PAL;
+
+    // ── Layout: chart ซ้าย, legend ขวา ──────────────────────────
+    const legendMaxW = 140;
+    const chartAreaW = c.width - legendMaxW - 8;
+    const cx = chartAreaW / 2;
+    const cy = c.height / 2 - 8;
+    const outerR = Math.min(chartAreaW/2 - 6, c.height/2 - 16);
+    const innerR = isPie ? 0 : outerR * 0.50;
+
+    // ── Build slices ────────────────────────────────────────────
+    let startAngle = -Math.PI / 2;
+    const slices = items.map(it=>{
+      const sweep = (it.v / total) * Math.PI * 2;
+      const clr = colors[it.i % colors.length] || PAL[it.i % PAL.length];
+      const sl = { ...it, sweep, startAngle, clr };
+      startAngle += sweep;
+      return sl;
+    });
+
+    // ── Draw slices ─────────────────────────────────────────────
+    slices.forEach(sl=>{
+      ctx2d.save();
+      ctx2d.beginPath();
+      ctx2d.moveTo(cx, cy);
+      ctx2d.arc(cx, cy, outerR, sl.startAngle, sl.startAngle+sl.sweep);
+      if(innerR>0) ctx2d.arc(cx, cy, innerR, sl.startAngle+sl.sweep, sl.startAngle, true);
+      ctx2d.closePath();
+      ctx2d.fillStyle = sl.clr;
+      ctx2d.fill();
+      ctx2d.strokeStyle = '#fff';
+      ctx2d.lineWidth = 2.5;
+      ctx2d.stroke();
+      ctx2d.restore();
+    });
+
+    // ── % Labels บน slice (pill สีขาว) ──────────────────────────
+    slices.forEach(sl=>{
+      const pct = sl.v / total * 100;
+      if(pct < 5) return;  // slice เล็กเกิน skip
+      const midA = sl.startAngle + sl.sweep / 2;
+      const labelR = innerR > 0
+        ? (innerR + outerR) / 2        // mid of ring
+        : outerR * 0.62;               // pie: 62% from center
+      const lx = cx + labelR * Math.cos(midA);
+      const ly = cy + labelR * Math.sin(midA);
+      const txt = pct.toFixed(1)+'%';
+
+      ctx2d.save();
+      ctx2d.font = 'bold 11.5px "Noto Sans Thai",sans-serif';
+      ctx2d.textAlign = 'center';
+      ctx2d.textBaseline = 'middle';
+      const tw = ctx2d.measureText(txt).width;
+      const pw = tw + 8, ph = 16, pr = 4;
+      // pill background
+      ctx2d.fillStyle = 'rgba(255,255,255,0.88)';
+      if(ctx2d.roundRect){
+        ctx2d.beginPath();
+        ctx2d.roundRect(lx-pw/2, ly-ph/2, pw, ph, pr);
+        ctx2d.fill();
+      } else {
+        ctx2d.fillRect(lx-pw/2, ly-ph/2, pw, ph);
+      }
+      // text
+      ctx2d.fillStyle = '#1e293b';
+      ctx2d.fillText(txt, lx, ly);
+      ctx2d.restore();
+    });
+
+    // ── Center label (doughnut only) ────────────────────────────
+    if(innerR > 0){
+      ctx2d.save();
+      ctx2d.textAlign = 'center'; ctx2d.textBaseline = 'middle';
+      ctx2d.font = 'bold 14px "Noto Sans Thai",sans-serif';
+      ctx2d.fillStyle = '#1e293b';
+      ctx2d.fillText(total.toLocaleString(), cx, cy - 7);
+      ctx2d.font = '9.5px "Noto Sans Thai",sans-serif';
+      ctx2d.fillStyle = '#64748b';
+      ctx2d.fillText('รายการ', cx, cy + 9);
+      ctx2d.restore();
+    }
+
+    // ── Legend ด้านขวา ──────────────────────────────────────────
+    ctx2d.save();
+    ctx2d.font = '10px "Noto Sans Thai",sans-serif';
+    ctx2d.textBaseline = 'middle';
+    const lx0 = chartAreaW + 8;
+    const lineH = 18;
+    const totalH = slices.length * lineH;
+    let ly0 = Math.max(8, (c.height - totalH) / 2);
+
+    slices.forEach(sl=>{
+      const pct = (sl.v / total * 100).toFixed(1);
+      const lbl = sl.label.length > 20 ? sl.label.slice(0,18)+'…' : sl.label;
+      // color swatch
+      ctx2d.fillStyle = sl.clr;
+      if(ctx2d.roundRect){
+        ctx2d.beginPath();
+        ctx2d.roundRect(lx0, ly0-5, 10, 10, 2);
+        ctx2d.fill();
+      } else {
+        ctx2d.fillRect(lx0, ly0-5, 10, 10);
+      }
+      // label + pct
+      ctx2d.fillStyle = '#374151';
+      ctx2d.fillText(lbl, lx0+14, ly0-2);
+      ctx2d.fillStyle = '#1d4ed8';
+      ctx2d.font = 'bold 10px "Noto Sans Thai",sans-serif';
+      ctx2d.fillText(pct+'%', lx0+14, ly0+9);
+      ctx2d.font = '10px "Noto Sans Thai",sans-serif';
+      ly0 += lineH;
+    });
+    ctx2d.restore();
+  }
+
+  // ── Main ProChart class ───────────────────────────────────────────
+  class ProChart {
+    constructor(ctxOrCanvas, cfg){
+      this._ctx = getCtx(ctxOrCanvas);
+      this.config = cfg || {};
+      this._render();
+    }
+    destroy(){ if(this._ctx){ this._ctx.clearRect(0,0,this._ctx.canvas.width,this._ctx.canvas.height); } }
+    update(){ this._render(); }
+    _render(){
+      const ctx2d=this._ctx; if(!ctx2d) return;
+      // Sync canvas pixel size with CSS display size
+      const cvs=ctx2d.canvas;
+      const pw=Math.max(cvs.parentElement?.offsetWidth||cvs.offsetWidth||0, 100) || 400;
+      const ph=Math.max(cvs.parentElement?.offsetHeight||cvs.offsetHeight||0, 60) || 220;
+      if(cvs.width!==pw) cvs.width=pw;
+      if(cvs.height!==ph) cvs.height=ph;
+      ctx2d.clearRect(0,0,cvs.width,cvs.height);
+      const cfg=this.config;
+      const type=(cfg.type||'line').toLowerCase();
+      try{
+        if(type==='radar')        { drawRadarChart(ctx2d,cfg); }
+        else if(type==='bubble')  { drawBubbleChart(ctx2d,cfg); }
+        else if(type==='bar')     { drawBarChart(ctx2d,cfg); }
+        else if(type==='scatter') { drawBubbleChart(ctx2d,cfg); }
+        else if(type==='doughnut'||type==='pie') { drawDoughnutChart(ctx2d,cfg); }
+        else                      { drawLineChart(ctx2d,cfg); }
+      } catch(e){ console.error('ProChart render error:',e); }
+    }
+  }
+  // Static method for Chart.js compat
+  ProChart.getChart = function(canvas){
+    // instance tracking via canvas dataset
+    return canvas?._proChartInstance||null;
+  };
+  const _OrigCreate = ProChart;
+  window.Chart = function(ctxOrCanvas, cfg){
+    const inst = new ProChart(ctxOrCanvas, cfg);
+    // track on canvas for getChart() compat
+    const cvs = (ctxOrCanvas && ctxOrCanvas.canvas) ? ctxOrCanvas.canvas : ctxOrCanvas;
+    if(cvs && cvs.nodeName==='CANVAS') cvs._proChartInstance = inst;
+    return inst;
+  };
+  window.Chart.getChart = function(canvas){ return canvas?._proChartInstance||null; };
+  window.Chart.defaults = {};
+})();
+
+
+    // ── MoM Delta Table ─────────────────────────────────────────────
+    function renderMoMTable(selectedMonth) {
+      const tbody = document.getElementById('momDeltaBody');
+      if (!tbody) return;
+      if (!reportData?.checked?.dccData?.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">ไม่มีข้อมูล — กด Refresh Data</td></tr>';
+        return;
+      }
+
+      const data     = reportData.checked.dccData;
+      // ใช้ global filter ถ้ามี ถ้าไม่มีใช้ Checklist เป็น default
+      const typeNow  = (typeof selectedTypeFilter !== 'undefined' && selectedTypeFilter && selectedTypeFilter !== 'ALL')
+                         ? selectedTypeFilter : 'Checklist';
+      const deptNow  = (typeof selectedDeptFilter !== 'undefined' && selectedDeptFilter && selectedDeptFilter !== 'ALL')
+                         ? selectedDeptFilter : 'ALL';
+
+      function normT(t){ t=(t||'').trim(); return t==='PM/WI'?'PMWI':t; }
+      function mkSort(mk){
+        const mm={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        const p=(mk||'').split('-'); return (2000+parseInt(p[1]||0))*12+(mm[p[0]]||0);
+      }
+
+      // Filter
+      const filtered = data.filter(r => {
+        const t=normT(r[5]||''), d=(r[6]||'').trim();
+        return (typeNow==='ALL'||t===typeNow) && (deptNow==='ALL'||d===deptNow);
+      });
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">ไม่มีข้อมูลตาม filter ที่เลือก</td></tr>';
+        return;
+      }
+
+      // Group by month
+      const byMonth = {};
+      filtered.forEach(r => {
+        const mk=(r[1]||'').trim(); if(!mk)return;
+        if(!byMonth[mk]) byMonth[mk]={units:0,errors:0};
+        byMonth[mk].units  += parseFloat(r[10])||0;
+        byMonth[mk].errors += parseFloat(r[11])||0;
+      });
+
+      const months = Object.keys(byMonth).sort((a,b)=>mkSort(a)-mkSort(b));
+      if (!months.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-3">ไม่มีข้อมูล</td></tr>';
+        return;
+      }
+
+      // baseline = max units สำหรับ coverage
+      const maxU = Math.max(...Object.values(byMonth).map(v=>v.units), 1);
+
+      const rowsHtml = months.map((mk, i) => {
+        const cur  = byMonth[mk];
+        const prev = i > 0 ? byMonth[months[i-1]] : null;
+
+        const errRate  = cur.units > 0 ? +(cur.errors/cur.units*100).toFixed(2) : 0;
+        const coverage = +(cur.units/maxU*100).toFixed(1);
+
+        const prevErr = prev && prev.units > 0 ? +(prev.errors/prev.units*100).toFixed(2) : null;
+        const prevCov = prev ? +(prev.units/maxU*100).toFixed(1) : null;
+
+        const dErr = prevErr !== null ? +(errRate - prevErr).toFixed(2) : null;
+        const dCov = prevCov !== null ? +(coverage - prevCov).toFixed(1) : null;
+
+        const dErrStr = dErr===null ? '—' : (dErr>0?'▲+':'▼')+Math.abs(dErr).toFixed(2)+'%';
+        const dCovStr = dCov===null ? '—' : (dCov>0?'▲+':'▼')+Math.abs(dCov).toFixed(1)+'%';
+        const dErrClr = dErr===null?'#6b7280':dErr<=0?'#10b981':'#ef4444';
+        const dCovClr = dCov===null?'#6b7280':dCov>=0?'#10b981':'#ef4444';
+
+        const status = dErr===null ? '—'
+          : dErr<0 ? '✅ Improving'
+          : dErr>0 ? '⚠️ Worsening'
+          : '➡️ Stable';
+        const statusClr = status.includes('Improving')?'#10b981':status.includes('Worsening')?'#ef4444':'#6b7280';
+        const errClr = errRate>5?'#dc2626':errRate>2?'#f59e0b':'#10b981';
+        const isSel  = mk === selectedMonth;
+        const rowBg  = isSel ? 'background:#eff6ff;' : (i%2===0?'':'background:#fafafa;');
+
+        return '<tr style="'+rowBg+'">'
+          +'<td style="font-size:.8rem;font-weight:700;white-space:nowrap;padding:6px 10px">'
+            +(isSel?'<b style="color:#1d4ed8">★ '+mk+'</b>':mk)+'</td>'
+          +'<td style="font-size:.8rem;text-align:right;padding:6px 8px">'+cur.units.toLocaleString()+'</td>'
+          +'<td style="font-size:.8rem;text-align:right;padding:6px 8px;color:#ef4444;font-weight:600">'+cur.errors.toLocaleString()+'</td>'
+          +'<td style="font-size:.8rem;text-align:right;padding:6px 8px;font-weight:700;color:'+errClr+'">'+errRate.toFixed(2)+'%</td>'
+          +'<td style="font-size:.8rem;text-align:right;padding:6px 8px;font-weight:700;color:'+dErrClr+'">'+dErrStr+'</td>'
+          +'<td style="font-size:.8rem;text-align:right;padding:6px 8px">'+coverage.toFixed(1)+'%</td>'
+          +'<td style="font-size:.8rem;text-align:right;padding:6px 8px;font-weight:700;color:'+dCovClr+'">'+dCovStr+'</td>'
+          +'<td style="font-size:.8rem;font-weight:700;color:'+statusClr+';padding:6px 8px">'+status+'</td>'
+          +'</tr>';
+      }).join('');
+
+      tbody.innerHTML = rowsHtml;
+    }
+
+
+
+    // ─────────────────────────────────────────────────────────────────
+    // ADVANCED ANALYTICS FUNCTIONS (Global Scope)
+    // ─────────────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════
+  // ADVANCED ANALYTICS FUNCTIONS — Data Analysis & Improvement
+  // ═══════════════════════════════════════════════════════════════
+
+  // ── Presentation KPI Banner ──────────────────────────────────
+  function renderPresentationKPIs(rows, selM, allMonths, byMonth) {
+    const TARGET_ERR = 5;
+    const cur  = byMonth[selM] || {units:0, errors:0};
+    const prevM = allMonths[allMonths.indexOf(selM)-1];
+    const prev = prevM ? byMonth[prevM] : null;
+
+    const errRate  = cur.units > 0 ? +(cur.errors/cur.units*100).toFixed(2) : 0;
+    const prevRate = prev && prev.units > 0 ? +(prev.errors/prev.units*100).toFixed(2) : null;
+    const dRate    = prevRate !== null ? +(errRate-prevRate).toFixed(2) : null;
+
+    const depts = [...new Set(rows.filter(r=>(r[1]||'').trim()===selM).map(r=>(r[6]||'').trim()))].filter(Boolean);
+
+    // Pareto: top error type from list1-5
+    const errTypeCnt = {};
+    rows.filter(r=>(r[1]||'').trim()===selM).forEach(r=>{
+      [r[12],r[13],r[14],r[15],r[16]].forEach(v=>{
+        const s=(v||'').toString().trim(); if(!s)return;
+        errTypeCnt[s]=(errTypeCnt[s]||0)+1;
+      });
+    });
+    const topEntries = Object.entries(errTypeCnt).sort((a,b)=>b[1]-a[1]);
+    const topErr  = topEntries[0]?.[0] || '—';
+    const totalET = Object.values(errTypeCnt).reduce((s,v)=>s+v,0);
+    const topPct  = topEntries[0] && totalET>0 ? (topEntries[0][1]/totalET*100).toFixed(0) : '—';
+
+    const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+    const setH = (id, val) => { const el=document.getElementById(id); if(el) el.innerHTML=val; };
+
+    set('pkpi_errRate',  errRate.toFixed(2)+'%');
+    set('pkpi_units',    cur.units.toLocaleString());
+    set('pkpi_errors',   cur.errors.toLocaleString());
+    set('pkpi_depts',    depts.length);
+    set('pkpi_topErr',   topErr.length>14 ? topErr.slice(0,12)+'…' : topErr);
+    setH('pkpi_topErrPct', topEntries[0] ? topPct+'% of all errors' : '');
+
+    const trendHtml = (d, lowerBetter) => {
+      if(d===null) return '<span style="opacity:.7">— No prev data</span>';
+      const good = lowerBetter ? d<=0 : d>=0;
+      return `<span>${d>0?'▲+':'▼'}${Math.abs(d)}% vs ${prevM||'-'}</span>`;
+    };
+    setH('pkpi_errTrend',   trendHtml(dRate, true));
+    setH('pkpi_unitsTrend', prev ? (cur.units>prev.units?'▲ UP':'▼ DOWN')+' vs '+prevM : '');
+    setH('pkpi_errorsTrend', prev ? (cur.errors>prev.errors?'▲ MORE':'▼ LESS')+' errors' : '');
+
+    // Color cards based on performance
+    const c1 = document.getElementById('pkpi1');
+    if(c1) c1.className = 'pkpi-card '+(errRate<=TARGET_ERR?'good':errRate<=TARGET_ERR*2?'warn':'bad');
+    const c3 = document.getElementById('pkpi3');
+    if(c3) c3.className = 'pkpi-card '+(dRate===null?'':dRate<0?'good':dRate>0?'bad':'warn');
+  }
+
+  // ── Pareto Chart ─────────────────────────────────────────────
+  function renderParetoChart(rows, selM) {
+    const ctx = document.getElementById('paretoChart')?.getContext('2d');
+    if(!ctx) return;
+
+    // รวม error types จาก List1-5 (col 12-16) + SubFunc errors
+    const cnt = {};
+    const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
+
+    // ถ้ามี error lists → นับ list items; ถ้าไม่มี → group by subfunc (ใช้ unitCheck เป็น weight)
+    let hasListData = false;
+    selRows.forEach(r => {
+      [r[12],r[13],r[14],r[15],r[16]].forEach(v => {
+        const s=(v||'').toString().trim(); if(!s) return;
+        hasListData = true;
+        const label = s.length>35 ? s.slice(0,32)+'…' : s;
+        cnt[label] = (cnt[label]||0) + 1;
+      });
+    });
+    // Fallback: ไม่มี list data → group by subfunc weighted by errUnit (หรือ unitCheck)
+    if(!hasListData) {
+      selRows.forEach(r => {
+        const w = Math.max(parseFloat(r[11])||0, 1); // weight = errUnit หรืออย่างน้อย 1
+        const sf = (r[8]||'Unknown').toString().trim();
+        const label = sf.length>35 ? sf.slice(0,32)+'…' : sf;
+        cnt[label] = (cnt[label]||0) + w;
+      });
+    }
+
+    if(!Object.keys(cnt).length) { drawNoData('paretoChart','ไม่มีข้อมูล Error Types'); return; }
+
+    const sorted = Object.entries(cnt).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const total  = sorted.reduce((s,[,v])=>s+v,0);
+    let cumPct = 0;
+    const cumData = sorted.map(([,v]) => { cumPct += v/total*100; return +cumPct.toFixed(1); });
+    const barClrs = sorted.map(([,],i) => i<3?'rgba(220,38,38,.85)':i<6?'rgba(245,158,11,.75)':'rgba(99,102,241,.65)');
+
+    _destroyAC('pareto');
+    _aC['pareto'] = createChart(ctx, {
+      data:{
+        labels: sorted.map(([k])=>k),
+        datasets:[
+          { type:'bar', label:'Error Count', data:sorted.map(([,v])=>v),
+            backgroundColor:barClrs, borderRadius:5, yAxisID:'y', order:2 },
+          { type:'line', label:'Cumulative %', data:cumData,
+            borderColor:'#1d4ed8', borderWidth:2.5, pointRadius:4,
+            pointBackgroundColor:'#1d4ed8', fill:false, yAxisID:'y2' },
+          { type:'line', label:'80% Target', data:sorted.map(()=>80),
+            borderColor:'rgba(220,38,38,.55)', borderWidth:1.5,
+            borderDash:[4,3], pointRadius:0, fill:false, yAxisID:'y2' },
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        scales:{
+          y:{ beginAtZero:true, title:{display:true,text:'Count'}, grid:{color:'rgba(0,0,0,0.04)'} },
+          y2:{ position:'right', min:0, max:100, ticks:{callback:v=>v+'%'},
+               title:{display:true,text:'Cumulative %'}, grid:{display:false} }
+        },
+        plugins:{
+          legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}},
+          tooltip:{callbacks:{
+            label: c => c.datasetIndex===0
+              ? c.dataset.label+': '+c.raw+' ('+((c.raw/total*100).toFixed(1))+'%)'
+              : c.dataset.label+': '+c.raw+'%'
+          }}
+        }
+      }
+    });
+  }
+
+  // ── Weekly Trend ─────────────────────────────────────────────
+  function renderWeeklyTrend(rows, selM) {
+    const ctx = document.getElementById('weeklyTrendChart')?.getContext('2d');
+    if(!ctx) return;
+
+    // Group by Week (r[2]) — fallback to daily if week empty
+    const byWeek = {};
+    const selWkRows = rows.filter(r=>(r[1]||'').trim()===selM);
+    selWkRows.forEach(r=>{
+      const wk = (r[2]||'').toString().trim();
+      const key = wk || (r[0]||'').toString().trim().slice(0,5) || 'Unknown';
+      if(!key) return;
+      if(!byWeek[key]) byWeek[key]={units:0,errors:0};
+      byWeek[key].units  += parseFloat(r[10])||0;
+      byWeek[key].errors += parseFloat(r[11])||0;
+    });
+
+    if(!Object.keys(byWeek).length) {
+      drawNoData('weeklyTrendChart','ไม่มีข้อมูลสำหรับเดือนที่เลือก'); return;
+    }
+
+    // Sort weeks
+    const weeks = Object.keys(byWeek).sort((a,b)=>{
+      const na=parseInt((a||'').replace(/\D/g,'')||0);
+      const nb=parseInt((b||'').replace(/\D/g,'')||0);
+      return na-nb;
+    });
+    const rates = weeks.map(w => byWeek[w].units>0 ? +(byWeek[w].errors/byWeek[w].units*100).toFixed(3) : 0);
+    const avgRate = rates.length ? +(rates.reduce((s,v)=>s+v,0)/rates.length).toFixed(3) : 0;
+    const TARGET = 5;
+
+    _destroyAC('weekly');
+    _aC['weekly'] = createChart(ctx, {
+      type:'line',
+      data:{labels:weeks, datasets:[
+        { label:'Weekly Error Rate (%)', data:rates,
+          borderColor:'#7c3aed', backgroundColor:'rgba(124,58,237,0.1)',
+          borderWidth:2.5, fill:true, tension:0.3,
+          pointRadius:rates.map(v=>v>TARGET?8:5),
+          pointBackgroundColor:rates.map(v=>v>TARGET?'#dc2626':'#7c3aed'),
+          pointBorderColor:'#fff', pointBorderWidth:2 },
+        { label:'Monthly Avg', data:weeks.map(()=>avgRate),
+          borderColor:'#059669', borderWidth:1.5, borderDash:[5,4],
+          pointRadius:0, fill:false },
+        { label:'Target 5%', data:weeks.map(()=>TARGET),
+          borderColor:'rgba(220,38,38,.4)', borderWidth:1, borderDash:[3,3],
+          pointRadius:0, fill:false }
+      ]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        scales:{
+          y:{ beginAtZero:true, ticks:{callback:v=>v+'%'},
+              title:{display:true,text:'Error Rate (%)'}, grid:{color:'rgba(0,0,0,0.04)'} },
+          x:{ grid:{color:'rgba(0,0,0,0.04)'} }
+        },
+        plugins:{
+          legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}},
+          tooltip:{callbacks:{label:c=>c.dataset.label+': '+c.raw+'%'+(parseFloat(c.raw)>TARGET?' ⚠️':'')}}
+        }
+      }
+    });
+  }
+
+  // ── Radar Scorecard ───────────────────────────────────────────
+  function renderRadarScorecard(rows, selM) {
+    const ctx = document.getElementById('radarScorecardChart')?.getContext('2d');
+    if(!ctx) return;
+
+    const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
+    if(!selRows.length) { drawNoData('radarScorecardChart','ไม่มีข้อมูล'); return; }
+
+    const deptSet = [...new Set(selRows.map(r=>(r[6]||'').trim()).filter(Boolean))];
+    const topDepts = deptSet.slice(0,5);
+
+    // Metrics per dept (normalized 0-100, higher=better)
+    // 1. Quality Score = 100 - error rate (capped at 0)
+    // 2. Coverage % = units / max_units * 100
+    // 3. Completion = units checked / plan * 100
+    // 4. Consistency = 100 if error rate < 5, else decreasing
+    // 5. Volume = relative volume score
+
+    const deptStats = {};
+    topDepts.forEach(d=>{
+      const dr = selRows.filter(r=>(r[6]||'').trim()===d);
+      const units = dr.reduce((s,r)=>s+(parseFloat(r[10])||0),0);
+      const errs  = dr.reduce((s,r)=>s+(parseFloat(r[11])||0),0);
+      const plan  = dr.reduce((s,r)=>s+(parseFloat(r[9])||0),0);
+      const rate  = units>0 ? errs/units*100 : 0;
+      deptStats[d] = { units, errs, plan, rate };
+    });
+
+    const maxUnits = Math.max(...Object.values(deptStats).map(v=>v.units),1);
+    const maxPlan  = Math.max(...Object.values(deptStats).map(v=>v.plan),1);
+    const pal = ['#1d4ed8','#7c3aed','#059669','#dc2626','#f59e0b'];
+
+    const datasets = topDepts.map((d,i)=>{
+      const s = deptStats[d];
+      const qual  = Math.max(0, 100 - s.rate*10);      // quality: penalize per % error
+      const vol   = s.units/maxUnits*100;               // volume score
+      const compl = s.plan>0 ? Math.min(100,s.units/s.plan*100) : vol;
+      const consis = s.rate<1?100:s.rate<3?80:s.rate<5?60:40;
+      const eff   = s.units>0 && s.errs>=0 ? Math.max(0,100-s.errs/s.units*200) : 50;
+      return {
+        label: d,
+        data: [qual.toFixed(1), vol.toFixed(1), compl.toFixed(1), consis.toFixed(1), eff.toFixed(1)].map(Number),
+        borderColor: pal[i],
+        backgroundColor: pal[i]+'25',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointBackgroundColor: pal[i]
+      };
+    });
+
+    _destroyAC('radar');
+    _aC['radar'] = createChart(ctx, {
+      type:'radar',
+      data:{
+        labels:['Quality Score','Volume','Completion','Consistency','Efficiency'],
+        datasets
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        scales:{ r:{
+          min:0, max:100,
+          ticks:{stepSize:20, font:{size:9}},
+          pointLabels:{font:{size:10},color:'#374151'},
+          grid:{color:'rgba(0,0,0,0.08)'},
+          angleLines:{color:'rgba(0,0,0,0.08)'}
+        }},
+        plugins:{ legend:{position:'bottom',labels:{font:{size:9},boxWidth:8}} }
+      }
+    });
+  }
+
+  // ── Func Breakdown ───────────────────────────────────────────
+  function renderFuncBreakdown(rows, selM) {
+    const ctx = document.getElementById('funcBreakdownChart')?.getContext('2d');
+    if(!ctx) return;
+
+    const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
+    if(!selRows.length) { drawNoData('funcBreakdownChart','ไม่มีข้อมูล'); return; }
+
+    // Group by Func
+    const byFunc = {};
+    selRows.forEach(r=>{
+      const fn=(r[7]||'Unknown').toString().trim();
+      const dept=(r[6]||'').trim();
+      const key = dept ? dept+'·'+fn : fn;
+      const lbl = key.length>40 ? key.slice(0,37)+'…' : key;
+      if(!byFunc[lbl]) byFunc[lbl]={units:0,errors:0};
+      byFunc[lbl].units  += parseFloat(r[10])||0;
+      byFunc[lbl].errors += parseFloat(r[11])||0;
+    });
+
+    const funcs = Object.entries(byFunc)
+      .map(([k,v])=>({k, rate:v.units>0?+(v.errors/v.units*100).toFixed(2):0, units:v.units, errors:v.errors}))
+      .sort((a,b)=>b.rate-a.rate).slice(0,10);
+
+    if(!funcs.length) { drawNoData('funcBreakdownChart','ไม่มีข้อมูล'); return; }
+
+    const TARGET = 5;
+    const barClrs = funcs.map(f => f.rate>TARGET?'rgba(220,38,38,.8)':f.rate>TARGET*.6?'rgba(245,158,11,.8)':'rgba(16,185,129,.8)');
+
+    _destroyAC('funcbreak');
+    _aC['funcbreak'] = createChart(ctx, {
+      type:'bar',
+      data:{
+        labels: funcs.map(f=>f.k),
+        datasets:[
+          { label:'Error Rate (%)', data:funcs.map(f=>f.rate),
+            backgroundColor:barClrs, borderWidth:0, borderRadius:5 }
+        ]
+      },
+      options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+        scales:{
+          x:{ beginAtZero:true, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Error Rate (%)'},
+              grid:{color:'rgba(0,0,0,0.04)'} },
+          y:{ ticks:{font:{size:9}} }
+        },
+        plugins:{
+          legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}},
+          tooltip:{callbacks:{label:c=>{
+            if(c.datasetIndex===0) return 'Error Rate: '+c.raw+'%'+(c.raw>TARGET?' ⚠️':' ✅');
+            return 'Units: '+c.raw.toLocaleString();
+          }}}
+        }
+      }
+    });
+  }
+
+  // ── SubFunc Heatmap ───────────────────────────────────────────
+  function renderSubFuncHeatmap(rows, selM) {
+    const container = document.getElementById('subfuncHeatmapContainer');
+    if(!container) return;
+
+    const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
+    if(!selRows.length) {
+      container.innerHTML = '<div class="text-center text-muted py-3 small">ไม่มีข้อมูลสำหรับเดือนที่เลือก</div>';
+      return;
+    }
+
+    // Build dept × subfunc matrix
+    const depts   = [...new Set(selRows.map(r=>(r[6]||'').trim()).filter(Boolean))].slice(0,8);
+    const subfuncs = [...new Set(selRows.map(r=>{
+      const sf=(r[8]||'').toString().trim();
+      return sf.length>40 ? sf.slice(0,37)+'…' : sf;
+    }).filter(Boolean))].slice(0,15);
+
+    const matrix = {}; // dept → subfunc → {units, errors}
+    selRows.forEach(r=>{
+      const d=(r[6]||'').trim(), sf=(r[8]||'').toString().trim();
+      if(!d||!sf) return;
+      const sfKey = sf.length>40 ? sf.slice(0,37)+'…' : sf;
+      if(!matrix[d]) matrix[d]={};
+      if(!matrix[d][sfKey]) matrix[d][sfKey]={units:0,errors:0};
+      matrix[d][sfKey].units  += parseFloat(r[10])||0;
+      matrix[d][sfKey].errors += parseFloat(r[11])||0;
+    });
+
+    // Render HTML table
+    let html = '<table class="heatmap-table"><thead><tr><th>Dept \\ SubFunc</th>';
+    subfuncs.forEach(sf => { html += '<th title="'+sf+'">'+sf.slice(0,18)+'</th>'; });
+    html += '</tr></thead><tbody>';
+
+    depts.forEach(d=>{
+      html += '<tr><td>'+d+'</td>';
+      subfuncs.forEach(sf=>{
+        const cell = matrix[d]?.[sf];
+        if(!cell || cell.units===0) {
+          html += '<td style="color:#cbd5e1;background:#f8fafc">—</td>';
+        } else {
+          const rate = +(cell.errors/cell.units*100).toFixed(2);
+          // Color: 0%=white, 2%=yellow, 5%=orange, 10%=red
+          const r255 = Math.min(255, Math.round(rate/10*255));
+          const g255 = Math.max(0, Math.round(255 - rate/10*255));
+          const bgClr = rate===0 ? '#f0fdf4'
+            : rate<2 ? `rgb(${180+r255*.3|0},${230},${180+r255*.3|0})`
+            : rate<5 ? `rgb(255,${Math.max(160,255-rate*15)|0},100)`
+            : `rgb(${Math.min(220,180+rate*3|0)},${Math.max(50,130-rate*10)|0},50)`;
+          const txClr = rate<3 ? '#1e293b' : '#fff';
+          const tooltip = `${d}·${sf}: ${rate}% (${cell.units}u/${cell.errors}e)`;
+          html += `<td style="background:${bgClr};color:${txClr}" title="${tooltip}">${rate.toFixed(1)}%</td>`;
+        }
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
 
 </script>
 </body>
