@@ -4605,23 +4605,25 @@ function updateKpiCards(monthKey) {
     }
     // END renderAreaTrend
 
-    // ── Photo Modal ──────────────────────────────────────────────────
+   // ── Photo Modal & Export (Unified Version) ──────────────────────────────────────────────────
     function openAreaPhotoModal(areaKey, probOrLoc, rowData, isByLoc) {
       const all = _getAreaRows();
       let targetRows;
+      
       if (rowData && Array.isArray(rowData)) {
         targetRows = [rowData];
       } else if (isByLoc) {
-        // จาก heatmap: areaKey=area, probOrLoc=location
         targetRows = all.filter(r => _aArea(r)===areaKey && _aLoc(r)===probOrLoc);
       } else {
         targetRows = all.filter(r => _aArea(r)===areaKey && _aProb(r)===probOrLoc);
       }
+      
       const modal = document.getElementById('areaPhotoModal');
       const title = document.getElementById('areaPhotoModalTitle');
       const info  = document.getElementById('areaPhotoModalInfo');
       const links = document.getElementById('areaPhotoModalLinks');
       if (!modal) return;
+      
       title.textContent = '📍 '+(isByLoc?'Location: ':'')+(probOrLoc||areaKey);
       info.innerHTML = targetRows.map(r =>
         '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">' +
@@ -4629,6 +4631,7 @@ function updateKpiCards(monthKey) {
         ' | Problem: '+_aProb(r)+(_aQty(r)>0?' | QTY: <b style="color:#7c3aed">'+_aQty(r)+'</b>':'') +
         '</div>'
       ).join('');
+      
       const allPhotos = targetRows.flatMap(_aPhotos);
       if (allPhotos.length) {
         links.innerHTML = allPhotos.map((url,i) =>
@@ -4639,9 +4642,13 @@ function updateKpiCards(monthKey) {
       } else {
         links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>';
       }
+      
+      modal.style.display = 'block';
+    }
 
     function closeAreaPhotoModal() {
-      const m = document.getElementById('areaPhotoModal'); if (m) m.style.display='none';
+      const m = document.getElementById('areaPhotoModal'); 
+      if (m) m.style.display = 'none';
     }
 
     function exportAreaTrendCSV() {
@@ -4655,65 +4662,7 @@ function updateKpiCards(monthKey) {
       a.href=url; a.download='Area_'+new Date().toISOString().slice(0,10)+'.csv';
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
-
-
-    // ── Drill-down Photo Modal ───────────────────────────────────
-    function openAreaPhotoModal(areaKey, prob, rowData) {
-      const all  = _getAreaRows();
-      let targetRows;
-
-      if (rowData && Array.isArray(rowData)) {
-        // Single row from table click
-        targetRows = [rowData];
-      } else {
-        // From heatmap: areaKey = area name, prob = problem
-        targetRows = all.filter(r => _aArea(r)===areaKey && _aProb(r)===prob);
-      }
-
-      const modal = document.getElementById('areaPhotoModal');
-      const title = document.getElementById('areaPhotoModalTitle');
-      const info  = document.getElementById('areaPhotoModalInfo');
-      const links = document.getElementById('areaPhotoModalLinks');
-      if (!modal) return;
-
-      title.textContent = '📍 '+prob;
-      info.innerHTML = targetRows.map(r =>
-        '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">' +
-        '<b>'+_aDate(r)+'</b> | Area: <b>'+_aArea(r)+'</b> | Location: '+_aLoc(r)+
-        ((_aQty(r)>0)?' | Quantity: <b style="color:#7c3aed">'+_aQty(r)+'</b>':'')+
-        '</div>'
-      ).join('');
-
-      const allPhotos = targetRows.flatMap(_aPhotos);
-      if (allPhotos.length) {
-        links.innerHTML = allPhotos.map((url,i) =>
-          `<a href="${url}" target="_blank" rel="noopener" style="display:inline-block; margin: 0 8px 8px 0; border-radius: 8px; overflow: hidden; border: 2px solid #e2e8f0; box-shadow: 0 3px 6px rgba(0,0,0,0.15); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-             <img src="${url}" style="height: 150px; min-width: 100px; max-width: 100%; object-fit: cover; display: block;" alt="Photo ${i+1}">
-           </a>`
-        ).join('');
-      } else {
-        links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>';
-      }
-      modal.style.display = 'block';
-    }
-
-    function closeAreaPhotoModal() {
-      const m = document.getElementById('areaPhotoModal');
-      if (m) m.style.display = 'none';
-    }
-
-    function renderSummaryCharts(selectedMonth) {
-      const typeNow = (selectedTypeFilter && selectedTypeFilter !== 'ALL') ? selectedTypeFilter : 'Checklist';
-      const deptNow = (selectedDeptFilter && selectedDeptFilter !== 'ALL') ? selectedDeptFilter : 'ALL';
-      if (!reportData?.checked?.dccData?.length) return;
-      const data = reportData.checked.dccData;
-
-      function normT(t){ t=(t||'').trim(); return t==='PM/WI'?'PMWI':t; }
-      function mkSort(mk){
-        const mm={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-        const p=(mk||'').split('-'); return (2000+parseInt(p[1]||0))*12+(mm[p[0]]||0);
-      }
-
+    
       const rows = data.filter(r => {
         const t=normT(r[5]||''), d=(r[6]||'').trim();
         return (typeNow==='ALL'||t===typeNow) && (deptNow==='ALL'||d===deptNow);
