@@ -5018,9 +5018,7 @@ function updateKpiCards(monthKey) {
         }
       } catch(e) { console.warn("Action Items Error:", e); }
       // 🟢🟢🟢 สิ้นสุดโค้ดส่วนที่เพิ่มใหม่ 🟢🟢🟢
-
     } // <--- จบฟังก์ชัน renderSummaryCharts แล้วครับ!
-  
 /* ===== Ultra-light Chart fallback (no external CDN needed) =====
    If Chart.js fails to load (corporate firewall / SSL inspection),
    this stub renders basic line / bar / scatter charts on <canvas>.
