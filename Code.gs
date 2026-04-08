@@ -162,7 +162,6 @@ function saveData(form) {
       form.art2,     form.desc2, form.qty2,
       imgUrls[0],    imgUrls[1], imgUrls[2],    imgUrls[3],
       form.remark,   form.inspector,
-      form.rootCause, form.issueStatus, form.actionOwner // 🟢🟢 เพิ่ม 3 ค่านี้ต่อท้าย!
     ]);
     return "บันทึก Area Inspection เรียบร้อย";
   } catch(e) { return "Error: " + e.toString(); }
