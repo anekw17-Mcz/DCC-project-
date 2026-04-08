@@ -3205,19 +3205,26 @@ function populateMonthFilter() {
       let html = '';
       let count = 0;
       
-      // 🟢 3. วนลูปเฉพาะข้อมูลที่เรียงแล้วเท่านั้น
+      // 🟢 3. เปลี่ยนตรงนี้เป็น sortedDcc เพื่อให้แสดงผลแบบเรียงลำดับล่าสุดขึ้นก่อน
       sortedDcc.forEach(function(row) { 
         const date = row[0] || '';
-        const month = row[1] || '';
+        
+        // 🟢 ปรับให้ตัดช่องว่าง และทำให้เป็นตัวพิมพ์ใหญ่เหมือนกันเพื่อเทียบค่า
+        const month = (row[1] || '').toString().trim().toUpperCase(); 
+        const inspector = (row[21] || '').toString().trim().toUpperCase(); 
+        
         const type = row[5] || '';
         const dept = row[6] || '';
         const func = row[7] || '';
         const subfunc = row[8] || '';
         const unitCheck = row[10] || '0';
-        const inspector = row[21] || '-';
 
-        if ((filterMonth === 'ALL' || month === filterMonth) &&
-            (filterInspector === 'ALL' || inspector === filterInspector)) {
+        // 🟢 ปรับตัวแปร Filter ให้เป็นตัวพิมพ์ใหญ่เพื่อใช้เทียบ
+        const fMonth = filterMonth.trim().toUpperCase();
+        const fInspector = filterInspector.trim().toUpperCase();
+
+        if ((fMonth === 'ALL' || month === fMonth) &&
+            (fInspector === 'ALL' || inspector === fInspector)) {
           count++;
           html += `<tr>
             <td>${date}</td>
@@ -3226,7 +3233,7 @@ function populateMonthFilter() {
             <td>${func}</td>
             <td>${subfunc}</td>
             <td class="text-center">${unitCheck}</td>
-            <td>${inspector}</td>
+            <td>${row[21] || '-'}</td> 
           </tr>`;
         }
       });
