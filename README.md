@@ -4663,6 +4663,18 @@ function updateKpiCards(monthKey) {
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
     }
     
+    function renderSummaryCharts(selectedMonth) {
+      const typeNow = (selectedTypeFilter && selectedTypeFilter !== 'ALL') ? selectedTypeFilter : 'Checklist';
+      const deptNow = (selectedDeptFilter && selectedDeptFilter !== 'ALL') ? selectedDeptFilter : 'ALL';
+      if (!reportData?.checked?.dccData?.length) return;
+      const data = reportData.checked.dccData;
+
+      function normT(t){ t=(t||'').trim(); return t==='PM/WI'?'PMWI':t; }
+      function mkSort(mk){
+        const mm={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        const p=(mk||'').split('-'); return (2000+parseInt(p[1]||0))*12+(mm[p[0]]||0);
+      }
+
       const rows = data.filter(r => {
         const t=normT(r[5]||''), d=(r[6]||'').trim();
         return (typeNow==='ALL'||t===typeNow) && (deptNow==='ALL'||d===deptNow);
@@ -4784,7 +4796,6 @@ function updateKpiCards(monthKey) {
       } else if(ctxDP) drawNoData('topDepartmentsChart','ไม่มีข้อมูล Dept');
 
       // ── Chart 3: Bubble — Coverage vs Error Rate ──────────────────
-      // x = error rate %, y = units checked (แสดง volume), r = relative size
       const maxU = Math.max(...deptSorted.map(d=>d.units), 1);
       const bubbleDS = deptSorted.map((d,i)=>({
         label: d.d,
@@ -5008,11 +5019,8 @@ function updateKpiCards(monthKey) {
       } catch(e) { console.warn("Action Items Error:", e); }
       // 🟢🟢🟢 สิ้นสุดโค้ดส่วนที่เพิ่มใหม่ 🟢🟢🟢
 
-    } // <--- นี่คือปีกกาปิดตัวสุดท้ายสุดของฟังก์ชัน renderSummaryCharts ปล่อยไว้เหมือนเดิมครับ
+    } // <--- จบฟังก์ชัน renderSummaryCharts แล้วครับ!
   
-
-
-
 /* ===== Ultra-light Chart fallback (no external CDN needed) =====
    If Chart.js fails to load (corporate firewall / SSL inspection),
    this stub renders basic line / bar / scatter charts on <canvas>.
