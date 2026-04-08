@@ -3192,20 +3192,20 @@ function populateMonthFilter() {
         return;
       }
 
-      // 1. ฟังก์ชันแปลงวันที่ dd/mm/yyyy เป็น Date เพื่อใช้เปรียบเทียบ
+      // 🟢 1. ฟังก์ชันแปลงวันที่เพื่อใช้เรียงลำดับ
       function parseDate(dateStr) {
         if (!dateStr) return new Date(0);
         const p = dateStr.split('/');
         return p.length === 3 ? new Date(p[2], p[1]-1, p[0]) : new Date(0);
       }
 
-      // 2. ทำการเรียงลำดับข้อมูล (Sort) จากวันที่ ใหม่ -> เก่า
+      // 🟢 2. เรียงข้อมูลจากวันที่ล่าสุด (ใหม่ -> เก่า)
       const sortedDcc = [...reportData.checked.dccData].sort((a, b) => parseDate(b[0]) - parseDate(a[0]));
 
       let html = '';
       let count = 0;
       
-      // 🟢 ใช้ sortedDcc อันเดียวเท่านั้น เพื่อให้ตารางเรียงวันที่ล่าสุดขึ้นก่อน
+      // 🟢 3. วนลูปเฉพาะข้อมูลที่เรียงแล้วเท่านั้น
       sortedDcc.forEach(function(row) { 
         const date = row[0] || '';
         const month = row[1] || '';
@@ -3216,7 +3216,6 @@ function populateMonthFilter() {
         const unitCheck = row[10] || '0';
         const inspector = row[21] || '-';
 
-        // --- ตรงนี้เป็นโค้ด Filter เดิมของท่าน ผจก. ---
         if ((filterMonth === 'ALL' || month === filterMonth) &&
             (filterInspector === 'ALL' || inspector === filterInspector)) {
           count++;
