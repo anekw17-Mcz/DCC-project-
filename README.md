@@ -3090,7 +3090,7 @@ function populateMonthFilter() {
         depts = ['DC all', 'BC', 'RTV', 'FTDC2'];
       } else {
         // Build from Sheet data for other types
-        const _isAllVariant = d => ['All','DC all','DC All','all','ALL'].includes((d||'').trim());
+        const _isAllVariant = d => ['All','all','ALL'].includes((d||'').trim());
         const set = new Set();
         if (reportData && reportData.checked && Array.isArray(reportData.checked.dccData)) {
           reportData.checked.dccData.forEach(r => {
@@ -4114,7 +4114,7 @@ function __computeKpiFromDcc(monthKey, typeFilter, deptFilter) {
     const dept = (r[6] || '').toString().trim();
     const type = (r[5] || '').toString().trim();  // r[5]=Type (PMWI/Checklist)
 
-    const _isAll = (v) => ['All','DC all','DC All','all','ALL'].includes((v||'').trim());
+    const _isAll = (v) => ['All','all','ALL'].includes((v||'').trim());
     if (typeFilter && !_isAll(typeFilter) && type !== typeFilter) continue;
     if (deptFilter && !_isAll(deptFilter) && dept !== deptFilter) continue;
 
@@ -5660,7 +5660,8 @@ function updateKpiCards(monthKey) {
       const byMonth = {};
       filtered.forEach(r => {
         const mk=(r[1]||'').trim(); if(!mk)return;
-        if(!byMonth[mk]) byMonth[mk]={units:0,errors:0};
+        if(!byMonth[mk]) byMonth[mk]={plan:0, units:0, errors:0};
+        byMonth[mk].plan   += parseFloat(r[9])||0;  // 🟢 เพิ่มบรรทัดดึงยอดเป้าหมาย
         byMonth[mk].units  += parseFloat(r[10])||0;
         byMonth[mk].errors += parseFloat(r[11])||0;
       });
@@ -5671,18 +5672,21 @@ function updateKpiCards(monthKey) {
         return;
       }
 
-      // baseline = max units สำหรับ coverage
-      const maxU = Math.max(...Object.values(byMonth).map(v=>v.units), 1);
+      // 🔴 ลบบรรทัด maxU ทิ้งไปแล้ว เพราะเราจะใช้ Plan แทน
 
       const rowsHtml = months.map((mk, i) => {
         const cur  = byMonth[mk];
         const prev = i > 0 ? byMonth[months[i-1]] : null;
 
         const errRate  = cur.units > 0 ? +(cur.errors/cur.units*100).toFixed(2) : 0;
-        const coverage = +(cur.units/maxU*100).toFixed(1);
+        
+        // 🟢 เปลี่ยนสูตร Coverage: เอา Unit หารด้วย Plan
+        const coverage = cur.plan > 0 ? +(cur.units/cur.plan*100).toFixed(1) : 0;
 
         const prevErr = prev && prev.units > 0 ? +(prev.errors/prev.units*100).toFixed(2) : null;
-        const prevCov = prev ? +(prev.units/maxU*100).toFixed(1) : null;
+        
+        // 🟢 เปลี่ยนสูตร Prev Coverage (ของเดือนที่แล้ว): เอา Unit หารด้วย Plan
+        const prevCov = prev && prev.plan > 0 ? +(prev.units/prev.plan*100).toFixed(1) : null;
 
         const dErr = prevErr !== null ? +(errRate - prevErr).toFixed(2) : null;
         const dCov = prevCov !== null ? +(coverage - prevCov).toFixed(1) : null;
