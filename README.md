@@ -4978,6 +4978,7 @@ function updateKpiCards(monthKey) {
       try { renderRadarScorecard(rows, selM); } catch(e) { console.warn('Radar err',e); }
       try { renderFuncBreakdown(rows, selM); } catch(e) { console.warn('FuncBreak err',e); }
       try { renderSubFuncHeatmap(rows, selM); } catch(e) { console.warn('Heatmap err',e); }
+      try { renderParetoDrillDown(rows, selM); } catch(e) { console.warn('Drilldown err',e); }
     }
 
 
@@ -6120,7 +6121,82 @@ function updateKpiCards(monthKey) {
     html += '</tbody></table>';
     container.innerHTML = html;
   }
+  // ── Pareto Drill-down (Stacked Bar) ───────────────────────────
+  function renderParetoDrillDown(rows, selM) {
+    const ctx = document.getElementById('paretoDrillDownChart')?.getContext('2d');
+    if(!ctx) return;
 
+    const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
+    if(!selRows.length) { drawNoData('paretoDrillDownChart','ไม่มีข้อมูล'); return; }
+
+    // 1. หา Top Departments ที่มี Error รวมสูงสุด (แกน X)
+    const deptErrors = {};
+    selRows.forEach(r=>{
+      const d = (r[6]||'Unknown').trim();
+      deptErrors[d] = (deptErrors[d]||0) + (parseFloat(r[11])||0);
+    });
+    
+    const topDepts = Object.entries(deptErrors)
+      .filter(x => x[1] > 0)
+      .sort((a,b) => b[1] - a[1])
+      .slice(0, 10) // เอามาวิเคราะห์ 10 แผนกแรกที่มีปัญหาเยอะสุด
+      .map(x => x[0]);
+
+    if(!topDepts.length) { drawNoData('paretoDrillDownChart','ไม่มี Error ในเดือนที่เลือก'); return; }
+
+    // 2. หาสาเหตุ (Sub-Function) ทั้งหมดในแผนกเหล่านั้น
+    const subFuncs = new Set();
+    selRows.forEach(r => {
+      const d = (r[6]||'Unknown').trim();
+      if (topDepts.includes(d) && (parseFloat(r[11])||0) > 0) {
+        subFuncs.add((r[8]||'Other').trim());
+      }
+    });
+    const sfArray = Array.from(subFuncs);
+
+    // 3. เตรียมชุดข้อมูลแยกตามสี (1 สี = 1 Sub-function)
+    const pal = ['#dc2626','#f59e0b','#1d4ed8','#059669','#7c3aed','#be185d','#0891b2','#d946ef','#f97316','#84cc16'];
+    
+    const datasets = sfArray.map((sf, i) => {
+      const data = topDepts.map(d => {
+        return selRows
+          .filter(r => (r[6]||'Unknown').trim() === d && (r[8]||'Other').trim() === sf)
+          .reduce((s, r) => s + (parseFloat(r[11])||0), 0);
+      });
+      return {
+        label: sf.length > 25 ? sf.slice(0,22)+'…' : sf,
+        data: data,
+        backgroundColor: pal[i % pal.length],
+        borderWidth: 1,
+        borderColor: '#ffffff'
+      };
+    }).filter(ds => ds.data.some(v => v > 0)); // กรองเอาเฉพาะข้อมูลที่มีค่า > 0
+
+    // วาดกราฟ
+    createChart(ctx, {
+      type: 'bar',
+      data: {
+        labels: topDepts,
+        datasets: datasets
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { stacked: true, grid: { display: false } },
+          y: { stacked: true, beginAtZero: true, title: { display: true, text: 'Total Errors' } }
+        },
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
+          tooltip: {
+            callbacks: {
+              label: c => c.raw > 0 ? ` ${c.dataset.label}: ${c.raw} Errors` : ''
+            }
+          }
+        }
+      }
+    });
+  }
 </script>
 </body>
 </html>
