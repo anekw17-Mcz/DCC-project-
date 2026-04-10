@@ -3277,103 +3277,210 @@ function populateMonthFilter() {
       tbody.innerHTML = html || '<tr><td colspan="7" class="text-center text-muted">No matching records</td></tr>';
     }
 
-    // =========== EXPORT FUNCTIONS ===========
-    function exportToExcel() {
-      const activeTab = document.querySelector('.btn-report-checked.active, .btn-report-waiting.active, .btn-report-summary.active');
-      const tabName = activeTab ? activeTab.textContent.trim() : 'Report';
-      
-      let rows = [];
-      let filename = 'SCD_Report_' + new Date().toISOString().slice(0,10) + '.csv';
+    // =========== EXPORT FUNCTIONS (PRO VERSION) ===========
+    
+    // 1. Export to Excel (ใช้ SheetJS สรุปเป็นหลาย Tab)
+    async function exportToExcel() {
+      const btn = document.querySelector('button[onclick="exportToExcel()"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้างไฟล์...';
+      btn.disabled = true;
 
-      // Collect data based on active tab
-      const checkedVisible = document.getElementById('reportChecked')?.style.display !== 'none';
-      const waitingVisible = document.getElementById('reportWaiting')?.style.display !== 'none';
+      try {
+        // โหลด Library SheetJS
+        if (typeof XLSX === 'undefined') {
+          await __loadScriptOnce('lib-xlsx', 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js');
+        }
 
-      if (waitingVisible) {
-        // Export waiting items
-        rows.push(['Type','Department','Function','Sub-Function','Target','Checked','Remaining','Status']);
+        const wb = XLSX.utils.book_new();
+        const dateStr = new Date().toISOString().slice(0,10);
+        
+        // --- Sheet 1: Summary Data ---
+        let summaryRows = [['Month', 'Type', 'Department', 'Function', 'Sub-Function', 'Plan', 'Unit Check', 'Err Unit', 'Inspector']];
+        if (reportData && reportData.checked && reportData.checked.dccData) {
+          reportData.checked.dccData.forEach(r => {
+            const t = (r[5]||'').trim(), d = (r[6]||'').trim();
+            if (selectedTypeFilter !== 'ALL' && t !== selectedTypeFilter) return;
+            if (selectedDeptFilter !== 'ALL' && d !== selectedDeptFilter) return;
+            summaryRows.push([r[1]||'', t, d, r[7]||'', r[8]||'', r[9]||0, r[10]||0, r[11]||0, r[21]||'']);
+          });
+        }
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Checked Data");
+
+        // --- Sheet 2: Waiting to Check ---
+        let waitingRows = [['Type', 'Department', 'Function', 'Sub-Function', 'Target', 'Checked', 'Remaining', 'Status']];
         if (reportData && reportData.waiting) {
           reportData.waiting.forEach(item => {
             if (selectedTypeFilter !== 'ALL' && item.type !== selectedTypeFilter) return;
             if (selectedDeptFilter !== 'ALL' && item.department !== selectedDeptFilter) return;
             const prog = item.target > 0 ? (item.checked/item.target*100).toFixed(1) : '0';
             const st = _waitingStatus(item, prog);
-            rows.push([item.type, item.department, item.function, item.subFunction,
-              item.target, item.checked, item.remaining, st.label.replace(/[🔴🟠🟢✅⛔]/u,'').trim()]);
+            waitingRows.push([item.type, item.department, item.function, item.subFunction, item.target, item.checked, item.remaining, st.label.replace(/[🔴🟠🟢✅⛔]/u,'').trim()]);
           });
         }
-        filename = 'SCD_Waiting_' + new Date().toISOString().slice(0,10) + '.csv';
-      } else {
-        // Export checked items
-        rows.push(['Date','Month','Type','Department','Function','Sub-Function','Plan','Unit Check','Err Unit','Inspector']);
+        const wsWaiting = XLSX.utils.aoa_to_sheet(waitingRows);
+        XLSX.utils.book_append_sheet(wb, wsWaiting, "Waiting List");
+
+        // สร้างไฟล์ Excel
+        XLSX.writeFile(wb, `SCD_Report_${dateStr}.xlsx`);
+        showSuccessMessage('Export Excel สำเร็จ');
+        
+      } catch (e) {
+        alert("เกิดข้อผิดพลาดในการ Export Excel: " + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // 2. Export to PDF (ใช้ html2pdf จัดหน้า A4 สวยงาม)
+    async function exportToPDF() {
+      const btn = document.querySelector('button[onclick="exportToPDF()"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้าง PDF...';
+      btn.disabled = true;
+
+      try {
+        // โหลด Library html2pdf
+        if (typeof html2pdf === 'undefined') {
+          await __loadScriptOnce('lib-html2pdf', 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+        }
+
+        // หา Container ที่กำลังเปิดอยู่ (Summary หรือ Checked)
+        let elementId = 'reportSummary';
+        if (document.getElementById('reportChecked').style.display !== 'none') elementId = 'reportChecked';
+        if (document.getElementById('reportAreaTrend').style.display !== 'none') elementId = 'reportAreaTrend';
+        
+        const element = document.getElementById(elementId);
+        
+        // ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
+        const buttonsToHide = element.querySelectorAll('.btn, select');
+        buttonsToHide.forEach(b => b.style.display = 'none');
+
+        const opt = {
+          margin:       0.3,
+          filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        await html2pdf().set(opt).from(element).save();
+        showSuccessMessage('Export PDF สำเร็จ');
+
+        // แสดงปุ่มกลับมาเหมือนเดิม
+        buttonsToHide.forEach(b => b.style.display = '');
+
+      } catch (e) {
+        alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // =========== EXPORT FUNCTIONS (PRO VERSION) ===========
+    
+    // 1. Export to Excel (ใช้ SheetJS สรุปเป็นหลาย Tab)
+    async function exportToExcel() {
+      const btn = document.querySelector('button[onclick="exportToExcel()"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้างไฟล์...';
+      btn.disabled = true;
+
+      try {
+        // โหลด Library SheetJS
+        if (typeof XLSX === 'undefined') {
+          await __loadScriptOnce('lib-xlsx', 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js');
+        }
+
+        const wb = XLSX.utils.book_new();
+        const dateStr = new Date().toISOString().slice(0,10);
+        
+        // --- Sheet 1: Summary Data ---
+        let summaryRows = [['Month', 'Type', 'Department', 'Function', 'Sub-Function', 'Plan', 'Unit Check', 'Err Unit', 'Inspector']];
         if (reportData && reportData.checked && reportData.checked.dccData) {
           reportData.checked.dccData.forEach(r => {
             const t = (r[5]||'').trim(), d = (r[6]||'').trim();
             if (selectedTypeFilter !== 'ALL' && t !== selectedTypeFilter) return;
             if (selectedDeptFilter !== 'ALL' && d !== selectedDeptFilter) return;
-            rows.push([r[0]||'', r[1]||'', t, d, r[7]||'', r[8]||'', r[9]||0, r[10]||0, r[11]||0, r[21]||'']);
+            summaryRows.push([r[1]||'', t, d, r[7]||'', r[8]||'', r[9]||0, r[10]||0, r[11]||0, r[21]||'']);
           });
         }
-        filename = 'SCD_Checked_' + new Date().toISOString().slice(0,10) + '.csv';
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Checked Data");
+
+        // --- Sheet 2: Waiting to Check ---
+        let waitingRows = [['Type', 'Department', 'Function', 'Sub-Function', 'Target', 'Checked', 'Remaining', 'Status']];
+        if (reportData && reportData.waiting) {
+          reportData.waiting.forEach(item => {
+            if (selectedTypeFilter !== 'ALL' && item.type !== selectedTypeFilter) return;
+            if (selectedDeptFilter !== 'ALL' && item.department !== selectedDeptFilter) return;
+            const prog = item.target > 0 ? (item.checked/item.target*100).toFixed(1) : '0';
+            const st = _waitingStatus(item, prog);
+            waitingRows.push([item.type, item.department, item.function, item.subFunction, item.target, item.checked, item.remaining, st.label.replace(/[🔴🟠🟢✅⛔]/u,'').trim()]);
+          });
+        }
+        const wsWaiting = XLSX.utils.aoa_to_sheet(waitingRows);
+        XLSX.utils.book_append_sheet(wb, wsWaiting, "Waiting List");
+
+        // สร้างไฟล์ Excel
+        XLSX.writeFile(wb, `SCD_Report_${dateStr}.xlsx`);
+        showSuccessMessage('Export Excel สำเร็จ');
+        
+      } catch (e) {
+        alert("เกิดข้อผิดพลาดในการ Export Excel: " + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
       }
-
-      // Build CSV
-      const csv = rows.map(row =>
-        row.map(cell => '"' + String(cell||'').replace(/"/g,'""') + '"').join(',')
-      ).join('\n');
-
-      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = filename;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     }
 
-    function exportToPDF() {
-      // Best approach for Apps Script Web App: Print dialog with print-optimized CSS
-      const printStyle = `
-        <style>
-          @media print {
-            body { background: white !important; padding: 0 !important; }
-            .header-banner { border-radius: 0 !important; margin: 0 0 16px !important; }
-            .nav-pills-modern, .btn-scan, .btn-submit, #btnRefresh,
-            .btn-report-checked, .btn-report-waiting, .btn-report-summary,
-            .report-filters, #advToggleWrap, .chart-info-box { display: none !important; }
-            .chart-container { page-break-inside: avoid; height: auto !important; min-height: 300px; }
-            .stat-card { break-inside: avoid; }
-            canvas { max-width: 100% !important; }
-          }
-        </style>`;
+    // 2. Export to PDF (ใช้ html2pdf จัดหน้า A4 สวยงาม)
+    async function exportToPDF() {
+      const btn = document.querySelector('button[onclick="exportToPDF()"]');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้าง PDF...';
+      btn.disabled = true;
 
-      const head = document.head.innerHTML;
-      const body = document.getElementById('reportSummary') || document.getElementById('reportChecked') || document.body;
-      
-      const win = window.open('', '_blank');
-      if (!win) { alert('กรุณาอนุญาต Popup เพื่อ Print PDF\nSettings → Allow popup for this site'); return; }
-      win.document.write('<!DOCTYPE html><html><head>' + head + printStyle + '</head><body style="padding:20px;background:white">');
-      win.document.write('<h2 style="font-family:sans-serif;color:#1d4ed8;margin-bottom:16px">SCD Inspection Report — ' + new Date().toLocaleDateString('th-TH') + '</h2>');
-      win.document.write(document.querySelector('.stats-grid')?.outerHTML || '');
-      win.document.write('<div style="margin-top:20px">' + (document.getElementById('mainChartsSection')?.outerHTML || '') + '</div>');
-      win.document.write('</body></html>');
-      win.document.close();
-      setTimeout(() => { win.focus(); win.print(); }, 600);
-    }
+      try {
+        // โหลด Library html2pdf
+        if (typeof html2pdf === 'undefined') {
+          await __loadScriptOnce('lib-html2pdf', 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+        }
 
-    function _waitingStatus(item, progress) {
-      // Estimate status by progress vs current day-of-month
-      const now = new Date();
-      const dayOfMonth = now.getDate();
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-      const monthProgress = (dayOfMonth / daysInMonth) * 100;
-      const prog = parseFloat(progress);
+        // หา Container ที่กำลังเปิดอยู่ (Summary หรือ Checked)
+        let elementId = 'reportSummary';
+        if (document.getElementById('reportChecked').style.display !== 'none') elementId = 'reportChecked';
+        if (document.getElementById('reportAreaTrend').style.display !== 'none') elementId = 'reportAreaTrend';
+        
+        const element = document.getElementById(elementId);
+        
+        // ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
+        const buttonsToHide = element.querySelectorAll('.btn, select');
+        buttonsToHide.forEach(b => b.style.display = 'none');
 
-      if (prog >= 100) return { label: '✅ Done', cls: 'success', rowCls: '' };
-      if (prog === 0)  return { label: '⛔ Not Started', cls: 'danger',  rowCls: 'table-danger' };
-      if (prog < monthProgress - 30) return { label: '🔴 Overdue',   cls: 'danger',  rowCls: 'table-danger' };
-      if (prog < monthProgress - 10) return { label: '🟠 Behind',    cls: 'warning', rowCls: 'table-warning' };
-      return { label: '🟢 On Track', cls: 'success', rowCls: '' };
+        const opt = {
+          margin:       0.3,
+          filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        await html2pdf().set(opt).from(element).save();
+        showSuccessMessage('Export PDF สำเร็จ');
+
+        // แสดงปุ่มกลับมาเหมือนเดิม
+        buttonsToHide.forEach(b => b.style.display = '');
+
+      } catch (e) {
+        alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
     }
 
     function renderWaitingData() {
@@ -3927,6 +4034,40 @@ function renderProfessionalCharts(selectedMonth) {
             scales:{ y:{ beginAtZero:true, suggestedMax: Math.max(1, displayMax*1.5),
               ticks:{ callback:v=> (+v).toFixed(displayMax<0.2?2:1)+'%' },
               title:{ display:true, text:'Error Rate (%)' } } },
+            
+            // 🟢 เพิ่มระบบ Cross-filtering เมื่อคลิกที่แท่งกราฟ
+            onClick: (event, elements, chart) => {
+              if (elements && elements.length > 0) {
+                // ถ้าคลิกโดนแท่งกราฟ
+                const index = elements[0].index;
+                const selectedDept = chart.data.labels[index];
+                
+                // สั่งเปลี่ยนค่า Dropdown Department
+                const deptSelect = document.getElementById('reportDeptFilter');
+                if (deptSelect) deptSelect.value = selectedDept;
+                
+                // อัปเดตตัวแปร Global
+                selectedDeptFilter = selectedDept;
+                showSuccessMessage('กรองข้อมูลเฉพาะแผนก: ' + selectedDept);
+                
+                // สั่งโหลดหน้าจอใหม่
+                onReportFilterChanged(); 
+              } else {
+                // ถ้าคลิกโดนพื้นที่ว่าง (Reset Filter)
+                const deptSelect = document.getElementById('reportDeptFilter');
+                if (deptSelect && deptSelect.value !== 'ALL') {
+                  deptSelect.value = 'ALL';
+                  selectedDeptFilter = 'ALL';
+                  showSuccessMessage('แสดงข้อมูลทั้งหมด');
+                  onReportFilterChanged();
+                }
+              }
+            },
+            // 🟢 เปลี่ยน Cursor ให้เป็นรูปมือเพื่อบอกว่ากดได้
+            onHover: (event, elements) => {
+              event.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+            },
+
             plugins:{
               legend:{ display:false },
               tooltip:{ callbacks:{
@@ -3934,7 +4075,7 @@ function renderProfessionalCharts(selectedMonth) {
                 afterLabel:(c)=>{
                   const d=deptTop[c.dataIndex];
                   const cov = d.plan>0 ? (d.unit/d.plan*100).toFixed(1)+'%' : 'N/A';
-                  return ['Unit Checked: '+d.unit.toFixed(0),'Errors: '+d.err.toFixed(0),'Plan: '+d.plan.toFixed(0),'Coverage: '+cov];
+                  return ['Unit Checked: '+d.unit.toFixed(0),'Errors: '+d.err.toFixed(0),'Plan: '+d.plan.toFixed(0),'Coverage: '+cov,'(คลิกเพื่อดูเฉพาะแผนกนี้)'];
                 }
               } }
             }
