@@ -1989,17 +1989,34 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
       <div class="spinner-border text-primary mb-3" style="width: 4rem; height: 4rem;" role="status"></div>
       <span class="fw-bold fs-5" style="color: var(--primary);">กำลังบันทึกข้อมูล...</span>
   </div>
+
+  <div id="fullImageModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center; flex-direction:column; backdrop-filter:blur(5px);" onclick="this.style.display='none'">
+      <button style="position:absolute; top:20px; right:30px; background:none; border:none; color:white; font-size:3rem; cursor:pointer;">&times;</button>
+      <div style="color:white; margin-bottom:10px; font-weight:bold;"><i class="bi bi-arrows-fullscreen me-2"></i>คลิกที่ใดก็ได้เพื่อปิด</div>
+      <img id="fullImageDisplay" src="" style="max-width:95%; max-height:85vh; object-fit:contain; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+  </div>
   <script>
     // --- เพิ่มไว้ใต้แท็ก <script> ---
 function getDirectImgUrl(driveUrl) {
   if (!driveUrl || typeof driveUrl !== 'string') return '';
-  // ใช้ Regex ดึง ID ของไฟล์จากลิงก์ Google Drive
   const match = driveUrl.match(/[-\w]{25,}/);
   if (match) {
-    // แปลงเป็น Thumbnail URL เพื่อให้ดึงรูปมาโชว์ในแท็ก <img> ได้โดยตรง
-    return 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w200';
+    // 🟢 ปรับความชัดรูปย่อจาก w200 เป็น w600 เพื่อรองรับรูปไซส์ 5x5 cm
+    return 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w600';
   }
   return driveUrl;
+}
+
+// 🟢 เพิ่มฟังก์ชันใหม่: สำหรับเปิดรูปใหญ่แบบ Lightbox
+function viewFullImage(event, driveUrl) {
+  event.stopPropagation(); 
+  const modal = document.getElementById('fullImageModal');
+  const img = document.getElementById('fullImageDisplay');
+  const match = driveUrl.match(/[-\w]{25,}/);
+  // ดึงภาพขนาดใหญ่พิเศษ (w1600) มาโชว์ เพื่อความชัดเจนสูงสุด
+  const highResUrl = match ? 'https://drive.google.com/thumbnail?id=' + match[0] + '&sz=w1600' : driveUrl;
+  img.src = highResUrl;
+  modal.style.display = 'flex';
 }
 
 // ===== MOBILE / EMBED GUARD =====
@@ -2031,7 +2048,23 @@ function getDirectImgUrl(driveUrl) {
           'font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial'
         ].join(';');
 
-        ov.innerHTML = '\n          <div style="max-width:560px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:22px">\n            <div style="font-size:18px;font-weight:800;margin-bottom:10px;color:#0f172a">เปิดหน้าไม่สำเร็จ</div>\n            <div style="color:#334155;line-height:1.65">\n              หน้านี้ต้องเปิดผ่านลิงก์ <b>Web app</b> ของ Apps Script และต้องให้เบราว์เซอร์อนุญาตการทำงานของ <b>google.script.run</b><br>\n              ถ้าเปิดจาก <b>LINE/Facebook/in‑app browser</b> หรือโดนบล็อก iframe/คุกกี้ จะทำให้ระบบใช้งานไม่ได้\n            </div>\n            <div style="margin-top:12px;color:#334155;line-height:1.65">\n              วิธีแก้:\n              <ol style="margin:8px 0 0 18px">\n                <li>คัดลอกลิงก์ที่ลงท้ายด้วย <code>/exec</code> แล้วเปิดใน <b>Chrome</b> หรือ <b>Safari</b></li>\n                <li>ลองเปิดแบบ Incognito/Private และปิด AdBlock/VPN ชั่วคราว</li>\n                <li>iPhone: Settings → Safari → ปิด “Prevent Cross‑Site Tracking” ชั่วคราวเพื่อทดสอบ</li>\n              </ol>\n            </div>\n          </div>\n        ';
+          ov.innerHTML = `
+          <div style="max-width:560px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.12);padding:22px">
+            <div style="font-size:18px;font-weight:800;margin-bottom:10px;color:#0f172a">เปิดหน้าไม่สำเร็จ</div>
+            <div style="color:#334155;line-height:1.65">
+              หน้านี้ต้องเปิดผ่านลิงก์ <b>Web app</b> ของ Apps Script และต้องให้เบราว์เซอร์อนุญาตการทำงานของ <b>google.script.run</b><br>
+              ถ้าเปิดจาก <b>LINE/Facebook/in‑app browser</b> หรือโดนบล็อก iframe/คุกกี้ จะทำให้ระบบใช้งานไม่ได้
+            </div>
+            <div style="margin-top:12px;color:#334155;line-height:1.65">
+              วิธีแก้:
+              <ol style="margin:8px 0 0 18px">
+                <li>คัดลอกลิงก์ที่ลงท้ายด้วย <code>/exec</code> แล้วเปิดใน <b>Chrome</b> หรือ <b>Safari</b></li>
+                <li>ลองเปิดแบบ Incognito/Private และปิด AdBlock/VPN ชั่วคราว</li>
+                <li>iPhone: Settings → Safari → ปิด “Prevent Cross‑Site Tracking” ชั่วคราวเพื่อทดสอบ</li>
+              </ol>
+            </div>
+          </div>
+        `;
 
         // If body isn't ready yet, append later.
         const append = () => (document.body ? document.body.appendChild(ov) : setTimeout(append, 50));
@@ -4601,14 +4634,13 @@ function updateKpiCards(monthKey) {
           const camBtn = hasAny
             ? allLinks.map((url, pi) => {
                 if (url && String(url).startsWith('http')) {
-                  // 🟢 แปลงเป็นรูปเล็กสำหรับโชว์ในตาราง
                   const directUrl = getDirectImgUrl(url); 
                   
-                  // 🟢 ปรับสไตล์: ขยายขนาดรูป, เพิ่ม Hover effect, และเงา
-                  return `<div onclick="window.open('${url}', '_blank')" title="คลิกเพื่อดูรูปใหญ่" 
-                      style="display:inline-block; width:60px; height:60px; ...> margin:2px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; cursor:pointer; background:#f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;"
-                      onmouseover="this.style.transform='scale(1.1)'; this.style.box-shadow='0 4px 8px rgba(0,0,0,0.2)';"
-                      onmouseout="this.style.transform='scale(1)'; this.style.box-shadow='0 2px 4px rgba(0,0,0,0.1)';"
+                  // 🟢 เปลี่ยนขนาดเป็น 140x140px (ประมาณ 4.5 - 5 cm) และใช้ onclick ตัวใหม่
+                  return `<div onclick="viewFullImage(event, '${url}')" title="คลิกเพื่อดูรูปขยาย" 
+                      style="display:inline-block; width:140px; height:140px; margin:4px; border:2px solid #e2e8f0; border-radius:8px; overflow:hidden; cursor:pointer; background:#f8fafc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;"
+                      onmouseover="this.style.transform='scale(1.05)'; this.style.box-shadow='0 6px 12px rgba(0,0,0,0.2)';"
+                      onmouseout="this.style.transform='scale(1)'; this.style.box-shadow='0 4px 6px rgba(0,0,0,0.1)';"
                       >
                        <img src="${directUrl}" style="width:100%; height:100%; object-fit:cover;">
                      </div>`;
