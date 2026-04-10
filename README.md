@@ -1286,7 +1286,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 </div>
                 <div class="col-4">
                   <label class="form-label-custom small text-danger-custom">Err. Unit</label>
-                  <input type="number" id="dccErrUnit" class="form-control" placeholder="0">
+                  <input type="number" id="dccErrUnit" class="form-control" value="0" placeholder="0">
                 </div>
               </div>
             </div></div>
@@ -2662,8 +2662,8 @@ function createChart(ctx, config) {
           payload.func = document.getElementById('dccFunc').value;
           payload.subfunc = document.getElementById('dccSubFunc').value;
           payload.planUnit = document.getElementById('dccPlanUnit').value;
-          payload.unitCheck = document.getElementById('dccUnitCheck').value;
-          payload.errUnit = document.getElementById('dccErrUnit').value;
+          payload.unitCheck = document.getElementById('dccUnitCheck').value || 0;
+          payload.errUnit = document.getElementById('dccErrUnit').value || 0;
           payload.list1 = document.getElementById('dccList1').value;
           payload.list2 = document.getElementById('dccList2').value;
           payload.list3 = document.getElementById('dccList3').value;
@@ -3205,26 +3205,29 @@ function populateMonthFilter() {
       let html = '';
       let count = 0;
       
-      // 🟢 3. เปลี่ยนตรงนี้เป็น sortedDcc เพื่อให้แสดงผลแบบเรียงลำดับล่าสุดขึ้นก่อน
+      // 🟢 ปรับตัวแปร Filter ให้ดึงค่า Type และ Dept ด้านบนมาด้วย
+      const fMonth = filterMonth.trim().toUpperCase();
+      const fInspector = filterInspector.trim().toUpperCase();
+      const fType = (selectedTypeFilter || 'ALL').toUpperCase();
+      const fDept = (selectedDeptFilter || 'ALL').toUpperCase();
+
       sortedDcc.forEach(function(row) { 
         const date = row[0] || '';
-        
-        // 🟢 ปรับให้ตัดช่องว่าง และทำให้เป็นตัวพิมพ์ใหญ่เหมือนกันเพื่อเทียบค่า
         const month = (row[1] || '').toString().trim().toUpperCase(); 
-        const inspector = (row[21] || '').toString().trim().toUpperCase(); 
-        
-        const type = row[5] || '';
-        const dept = row[6] || '';
+        const type = (row[5] || '').toString().trim().toUpperCase();
+        const dept = (row[6] || '').toString().trim().toUpperCase();
         const func = row[7] || '';
         const subfunc = row[8] || '';
         const unitCheck = row[10] || '0';
+        const inspector = (row[21] || '').toString().trim().toUpperCase(); 
 
-        // 🟢 ปรับตัวแปร Filter ให้เป็นตัวพิมพ์ใหญ่เพื่อใช้เทียบ
-        const fMonth = filterMonth.trim().toUpperCase();
-        const fInspector = filterInspector.trim().toUpperCase();
-
-        if ((fMonth === 'ALL' || month === fMonth) &&
-            (fInspector === 'ALL' || inspector === fInspector)) {
+        // 🟢 แก้ไขเงื่อนไข: ให้รองรับ fMonth === '' และ fInspector === '' 
+        // พร้อมเพิ่มเช็ค fType และ fDept
+        if ((fMonth === '' || fMonth === 'ALL' || month === fMonth) &&
+            (fInspector === '' || fInspector === 'ALL' || inspector === fInspector) &&
+            (fType === 'ALL' || type === fType) &&
+            (fDept === 'ALL' || dept === fDept)) {
+          
           count++;
           html += `<tr>
             <td>${date}</td>
@@ -4602,8 +4605,8 @@ function updateKpiCards(monthKey) {
                   const directUrl = getDirectImgUrl(url); 
                   
                   // 🟢 ปรับสไตล์: ขยายขนาดรูป, เพิ่ม Hover effect, และเงา
-                  return `<div onclick="openAreaPhotoModal('','','',false,['${url}'])" title="คลิกเพื่อดูรูปใหญ่" 
-                      style="display:inline-block; width:60px; height:60px; margin:2px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; cursor:pointer; background:#f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;"
+                  return `<div onclick="window.open('${url}', '_blank')" title="คลิกเพื่อดูรูปใหญ่" 
+                      style="display:inline-block; width:60px; height:60px; ...> margin:2px; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; cursor:pointer; background:#f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;"
                       onmouseover="this.style.transform='scale(1.1)'; this.style.box-shadow='0 4px 8px rgba(0,0,0,0.2)';"
                       onmouseout="this.style.transform='scale(1)'; this.style.box-shadow='0 2px 4px rgba(0,0,0,0.1)';"
                       >
@@ -4673,52 +4676,6 @@ function updateKpiCards(monthKey) {
       const url=URL.createObjectURL(blob); const a=document.createElement('a');
       a.href=url; a.download='Area_'+new Date().toISOString().slice(0,10)+'.csv';
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    }
-
-
-    // ── Drill-down Photo Modal ───────────────────────────────────
-    function openAreaPhotoModal(areaKey, prob, rowData) {
-      const all  = _getAreaRows();
-      let targetRows;
-
-      if (rowData && Array.isArray(rowData)) {
-        // Single row from table click
-        targetRows = [rowData];
-      } else {
-        // From heatmap: areaKey = area name, prob = problem
-        targetRows = all.filter(r => _aArea(r)===areaKey && _aProb(r)===prob);
-      }
-
-      const modal = document.getElementById('areaPhotoModal');
-      const title = document.getElementById('areaPhotoModalTitle');
-      const info  = document.getElementById('areaPhotoModalInfo');
-      const links = document.getElementById('areaPhotoModalLinks');
-      if (!modal) return;
-
-      title.textContent = '📍 '+prob;
-      info.innerHTML = targetRows.map(r =>
-        '<div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px solid #e2e8f0">' +
-        '<b>'+_aDate(r)+'</b> | Area: <b>'+_aArea(r)+'</b> | Location: '+_aLoc(r)+
-        ((_aQty(r)>0)?' | Quantity: <b style="color:#7c3aed">'+_aQty(r)+'</b>':'')+
-        '</div>'
-      ).join('');
-
-      const allPhotos = targetRows.flatMap(_aPhotos);
-      if (allPhotos.length) {
-        links.innerHTML = allPhotos.map((url,i) =>
-          '<a href="'+url+'" target="_blank" rel="noopener" class="btn btn-sm" ' +
-          'style="background:#0891b2;color:#fff;border:none;border-radius:8px;padding:8px 14px">' +
-          '<i class="bi bi-image me-1"></i>Photo '+(i+1)+'</a>'
-        ).join('');
-      } else {
-        links.innerHTML = '<span class="text-muted">ไม่มีรูปภาพในรายการนี้</span>';
-      }
-      modal.style.display = 'block';
-    }
-
-    function closeAreaPhotoModal() {
-      const m = document.getElementById('areaPhotoModal');
-      if (m) m.style.display = 'none';
     }
 
     function renderSummaryCharts(selectedMonth) {
