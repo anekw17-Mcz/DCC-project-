@@ -3278,110 +3278,6 @@ function populateMonthFilter() {
     }
 
     // =========== EXPORT FUNCTIONS (PRO VERSION) ===========
-    
-    // 1. Export to Excel (ใช้ SheetJS สรุปเป็นหลาย Tab)
-    async function exportToExcel() {
-      const btn = document.querySelector('button[onclick="exportToExcel()"]');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้างไฟล์...';
-      btn.disabled = true;
-
-      try {
-        // โหลด Library SheetJS
-        if (typeof XLSX === 'undefined') {
-          await __loadScriptOnce('lib-xlsx', 'https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js');
-        }
-
-        const wb = XLSX.utils.book_new();
-        const dateStr = new Date().toISOString().slice(0,10);
-        
-        // --- Sheet 1: Summary Data ---
-        let summaryRows = [['Month', 'Type', 'Department', 'Function', 'Sub-Function', 'Plan', 'Unit Check', 'Err Unit', 'Inspector']];
-        if (reportData && reportData.checked && reportData.checked.dccData) {
-          reportData.checked.dccData.forEach(r => {
-            const t = (r[5]||'').trim(), d = (r[6]||'').trim();
-            if (selectedTypeFilter !== 'ALL' && t !== selectedTypeFilter) return;
-            if (selectedDeptFilter !== 'ALL' && d !== selectedDeptFilter) return;
-            summaryRows.push([r[1]||'', t, d, r[7]||'', r[8]||'', r[9]||0, r[10]||0, r[11]||0, r[21]||'']);
-          });
-        }
-        const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
-        XLSX.utils.book_append_sheet(wb, wsSummary, "Checked Data");
-
-        // --- Sheet 2: Waiting to Check ---
-        let waitingRows = [['Type', 'Department', 'Function', 'Sub-Function', 'Target', 'Checked', 'Remaining', 'Status']];
-        if (reportData && reportData.waiting) {
-          reportData.waiting.forEach(item => {
-            if (selectedTypeFilter !== 'ALL' && item.type !== selectedTypeFilter) return;
-            if (selectedDeptFilter !== 'ALL' && item.department !== selectedDeptFilter) return;
-            const prog = item.target > 0 ? (item.checked/item.target*100).toFixed(1) : '0';
-            const st = _waitingStatus(item, prog);
-            waitingRows.push([item.type, item.department, item.function, item.subFunction, item.target, item.checked, item.remaining, st.label.replace(/[🔴🟠🟢✅⛔]/u,'').trim()]);
-          });
-        }
-        const wsWaiting = XLSX.utils.aoa_to_sheet(waitingRows);
-        XLSX.utils.book_append_sheet(wb, wsWaiting, "Waiting List");
-
-        // สร้างไฟล์ Excel
-        XLSX.writeFile(wb, `SCD_Report_${dateStr}.xlsx`);
-        showSuccessMessage('Export Excel สำเร็จ');
-        
-      } catch (e) {
-        alert("เกิดข้อผิดพลาดในการ Export Excel: " + e.message);
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    }
-
-    // 2. Export to PDF (ใช้ html2pdf จัดหน้า A4 สวยงาม)
-    async function exportToPDF() {
-      const btn = document.querySelector('button[onclick="exportToPDF()"]');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้าง PDF...';
-      btn.disabled = true;
-
-      try {
-        // โหลด Library html2pdf
-        if (typeof html2pdf === 'undefined') {
-          await __loadScriptOnce('lib-html2pdf', 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-        }
-
-        // หา Container ที่กำลังเปิดอยู่ (Summary หรือ Checked)
-        let elementId = 'reportSummary';
-        if (document.getElementById('reportChecked').style.display !== 'none') elementId = 'reportChecked';
-        if (document.getElementById('reportAreaTrend').style.display !== 'none') elementId = 'reportAreaTrend';
-        
-        const element = document.getElementById(elementId);
-        
-        // ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
-        const buttonsToHide = element.querySelectorAll('.btn, select');
-        buttonsToHide.forEach(b => b.style.display = 'none');
-
-        const opt = {
-          margin:       0.3,
-          filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
-        };
-
-        await html2pdf().set(opt).from(element).save();
-        showSuccessMessage('Export PDF สำเร็จ');
-
-        // แสดงปุ่มกลับมาเหมือนเดิม
-        buttonsToHide.forEach(b => b.style.display = '');
-
-      } catch (e) {
-        alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    }
-
-    // =========== EXPORT FUNCTIONS (PRO VERSION) ===========
-    
     // 1. Export to Excel (ใช้ SheetJS สรุปเป็นหลาย Tab)
     async function exportToExcel() {
       const btn = document.querySelector('button[onclick="exportToExcel()"]');
@@ -4311,17 +4207,30 @@ function updateKpiCards(monthKey) {
   const typeFilter = (document.getElementById('reportTypeFilter')?.value || 'All').toString();
   const deptFilter = (document.getElementById('reportDeptFilter')?.value || 'All').toString();
   const kpi = __computeKpiFromDcc(monthKey, typeFilter, deptFilter);
-  // FIX #6: use actual HTML element IDs (kpi* IDs do not exist in DOM)
+  
   const elErr = document.getElementById('totalErrorsMonth1');
   if (elErr) elErr.textContent = kpi.totalErr.toLocaleString();
+  
   const elUnit = document.getElementById('totalUnitsMonth1');
   if (elUnit) elUnit.textContent = kpi.totalUnit.toLocaleString();
+  
   const elRate = document.getElementById('errorRateMonth1');
   if (elRate) elRate.textContent = kpi.errorRate.toFixed(2) + '%';
-  const elIns = document.getElementById('activeInspectors1');
-  if (elIns) elIns.textContent = kpi.activeInspectors.toLocaleString();
+  
+  // 🟢 แก้ไขตรงนี้: เปลี่ยน ID และเปลี่ยนจากการนับ Inspector เป็นนับจำนวน Department 
+  const elDept = document.getElementById('deptCountMonth1');
+  if (elDept) {
+    const rows = reportData?.checked?.dccData || [];
+    const depts = new Set();
+    const isAllType = ['All','ALL','all'].includes(typeFilter);
+    rows.forEach(r => {
+      if ((r[1] || '').trim() === monthKey && (isAllType || r[5] === typeFilter)) {
+        depts.add(r[6]);
+      }
+    });
+    elDept.textContent = depts.size.toLocaleString();
+  }
 }
-
 
     // ============================================================
     // AREA TREND — Data Analysis & Improvement Dashboard
