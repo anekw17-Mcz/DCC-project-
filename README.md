@@ -3437,52 +3437,6 @@ function populateMonthFilter() {
       }
     }
 
-    // 2. Export to PDF (ใช้ html2pdf จัดหน้า A4 สวยงาม)
-    async function exportToPDF() {
-      const btn = document.querySelector('button[onclick="exportToPDF()"]');
-      const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้าง PDF...';
-      btn.disabled = true;
-
-      try {
-        // โหลด Library html2pdf
-        if (typeof html2pdf === 'undefined') {
-          await __loadScriptOnce('lib-html2pdf', 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
-        }
-
-        // หา Container ที่กำลังเปิดอยู่ (Summary หรือ Checked)
-        let elementId = 'reportSummary';
-        if (document.getElementById('reportChecked').style.display !== 'none') elementId = 'reportChecked';
-        if (document.getElementById('reportAreaTrend').style.display !== 'none') elementId = 'reportAreaTrend';
-        
-        const element = document.getElementById(elementId);
-        
-        // ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
-        const buttonsToHide = element.querySelectorAll('.btn, select');
-        buttonsToHide.forEach(b => b.style.display = 'none');
-
-        const opt = {
-          margin:       0.3,
-          filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
-        };
-
-        await html2pdf().set(opt).from(element).save();
-        showSuccessMessage('Export PDF สำเร็จ');
-
-        // แสดงปุ่มกลับมาเหมือนเดิม
-        buttonsToHide.forEach(b => b.style.display = '');
-
-      } catch (e) {
-        alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
-      } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-      }
-    }
-
     function renderWaitingData() {
       const tbody = document.getElementById('waitingTableBody');
       
@@ -4290,8 +4244,17 @@ function __updateKpiCardsFromSummary(monthKey) {
     if (elUnit) elUnit.textContent = totalUnit.toLocaleString();
     const elRate = document.getElementById('errorRateMonth1');
     if (elRate) elRate.textContent = rate.toFixed(2) + '%';
-    const elIns = document.getElementById('activeInspectors1');  // FIX #2: was 'activeInspectorsMonth1'
-    if (elIns) elIns.textContent = inspectors.toLocaleString();
+    const elDept = document.getElementById('deptCountMonth1');
+    if (elDept) {
+    //ดึงข้อมูลแผนกทั้งหมดที่มีการตรวจในเดือนนั้นมานับจำนวน
+    const typeFilter = document.getElementById('reportTypeFilter')?.value || 'All';
+    const rows = reportData?.checked?.dccData || [];
+    const depts = new Set();
+    rows.forEach(r => {
+      if (r[1] === monthKey && (typeFilter === 'ALL' || r[5] === typeFilter)) depts.add(r[6]);
+    });
+    elDept.textContent = depts.size.toLocaleString();
+}
   } catch(e) {
     console.warn("KPI update failed:", e);
   }
