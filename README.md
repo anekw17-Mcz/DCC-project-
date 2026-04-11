@@ -2202,13 +2202,24 @@ function createChart(ctx, config) {
     let completionChart = null;
     let errorTypeChart = null;
     let topDepartmentsChart = null;
-    let errorRateTrendProfChart = null;  // FIX: was missing -> caused ReferenceError in renderProfessionalCharts
+    let errorRateTrendProfChart = null;
 
     // NEW: Comparison Charts
     let metricsComparisonChart = null;
     let errorTypeComparisonChart = null;
     let deptComparisonChart = null;
 
+    // 🟢 1. เพิ่มตัวแปรนี้เพื่อแก้บั๊ก Console
+    let selectedMonth = ''; 
+
+    // 🟢 2. เพิ่มฟังก์ชันนี้เพื่อแก้หน้า Waiting to check ค้าง
+    function _waitingStatus(item, progress) {
+      const p = parseFloat(progress);
+      if (p === 0) return { label: '⛔ Not Started', cls: 'danger', rowCls: '' };
+      if (p < 50) return { label: '🔴 Behind', cls: 'warning', rowCls: '' };
+      if (p < 100) return { label: '🟢 On Track', cls: 'success', rowCls: '' };
+      return { label: '✅ Completed', cls: 'success', rowCls: '' };
+    }
     // =========== LOGIN SYSTEM ===========
     function handleLogin(event) {
       event.preventDefault();
@@ -2828,28 +2839,25 @@ document.getElementById('formArea').reset();
       const buttons  = ['btnViewChecked', 'btnViewWaiting', 'btnViewSummary', 'btnViewArea'];
       
       sections.forEach(s => document.getElementById(s).style.display = 'none');
+      
+      // 🟢 ลบแค่สถานะ active (ไม่ลบกรอบหรือสีของปุ่ม)
       buttons.forEach(b => {
         const btn = document.getElementById(b);
-        btn.classList.remove('btn-primary', 'btn-warning', 'btn-info', 'active');
-        btn.classList.add('btn-outline-' + (b.includes('Checked') ? 'primary' : b.includes('Waiting') ? 'warning' : 'info'));
+        if (btn) btn.classList.remove('active');
       });
       
       if (tab === 'checked') {
         document.getElementById('reportChecked').style.display = 'block';
         const btn = document.getElementById('btnViewChecked');
-        btn.classList.remove('btn-outline-primary');
-        btn.classList.add('active');
+        if (btn) btn.classList.add('active');
       } else if (tab === 'waiting') {
         document.getElementById('reportWaiting').style.display = 'block';
         const btn = document.getElementById('btnViewWaiting');
-        btn.classList.remove('btn-outline-warning');
-        btn.classList.add('active');
+        if (btn) btn.classList.add('active');
       } else if (tab === 'summary') {
         document.getElementById('reportSummary').style.display = 'block';
         const btn = document.getElementById('btnViewSummary');
-        btn.classList.remove('btn-outline-info');
-        btn.classList.add('active');
-        // FIX: render charts when Summary tab is opened
+        if (btn) btn.classList.add('active');
         if (typeof updateProfessionalDashboard === 'function') {
           updateProfessionalDashboard();
         }
@@ -2857,8 +2865,6 @@ document.getElementById('formArea').reset();
         document.getElementById('reportAreaTrend').style.display = 'block';
         const aBtn = document.getElementById('btnViewArea');
         if (aBtn) aBtn.classList.add('active');
-        // ซ่อน Type/Dept filter — ไม่เกี่ยวกับ Area Trend
-        const rf = document.querySelector('.report-filters');
         if (rf) rf.style.display = 'none';
         setTimeout(() => renderAreaTrend(), 80);
       }
