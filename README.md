@@ -1968,6 +1968,17 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 </div>
 
                 <!-- Hidden canvases for backward compat -->
+                <div class="chart-container mb-3">
+                  <div class="chart-title">
+                    <i class="bi bi-layers-half me-2" style="color:#0ea5e9"></i>
+                    Pareto Drill-down — Department Errors by Sub-Function
+                  </div>
+                  <div class="chart-insight-bar">
+                    📊 <b>Drill-down Analysis:</b> แท่งกราฟแสดงจำนวน Error รวมของแต่ละแผนก (เรียงจากมากไปน้อย) และแบ่งสีตาม Sub-Function
+                  </div>
+                  <div class="chart-canvas-wrap" style="height:260px"><canvas id="paretoDrillDownChart"></canvas></div>
+                </div>
+
                 <canvas id="errorRateChart" style="display:none"></canvas>
                 <canvas id="metricsComparisonChart" style="display:none"></canvas>
                 <canvas id="errorTypeComparisonChart" style="display:none"></canvas>
@@ -3333,6 +3344,51 @@ function populateMonthFilter() {
         
       } catch (e) {
         alert("เกิดข้อผิดพลาดในการ Export Excel: " + e.message);
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+      // 2. Export to PDF (ใช้ html2pdf จัดหน้า A4 สวยงาม)
+    async function exportToPDF() {
+      const btn = document.querySelector('button[onclick="exportToPDF()"]');
+      if (!btn) return;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้าง PDF...';
+      btn.disabled = true;
+
+      try {
+        // โหลด Library html2pdf
+        if (typeof html2pdf === 'undefined') {
+          await __loadScriptOnce('lib-html2pdf', 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+        }
+
+        let elementId = 'reportSummary';
+        if (document.getElementById('reportChecked').style.display !== 'none') elementId = 'reportChecked';
+        if (document.getElementById('reportAreaTrend').style.display !== 'none') elementId = 'reportAreaTrend';
+        
+        const element = document.getElementById(elementId);
+        
+        // ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
+        const buttonsToHide = element.querySelectorAll('.btn, select');
+        buttonsToHide.forEach(b => b.style.display = 'none');
+
+        const opt = {
+          margin:       0.3,
+          filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+        };
+
+        await html2pdf().set(opt).from(element).save();
+        showSuccessMessage('Export PDF สำเร็จ');
+
+        // แสดงปุ่มกลับมาเหมือนเดิม
+        buttonsToHide.forEach(b => b.style.display = '');
+
+      } catch (e) {
+        alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
       } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
