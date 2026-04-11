@@ -1110,6 +1110,13 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
 
 /* Hide legacy dashboard mode toggle */
 #dashboardModeToggle,.dashboard-mode-toggle{display:none!important;}
+
+/* 🟢 ป้องกัน PDF ตัดกราฟแหว่งกลางหน้า (ขั้นเด็ดขาด) */
+.row, .chart-container, .card, .table-wrapper, tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+}
+
 </style>
 </head>
 <body>
@@ -3353,7 +3360,7 @@ function populateMonthFilter() {
         btn.disabled = false;
       }
     }
-      // 2. Export to PDF (เวอร์ชันแก้ปัญหากราฟแหว่ง + รูปหาย)
+      // 2. Export to PDF (เวอร์ชันแก้ปัญหากราฟแหว่ง ขั้นเด็ดขาด)
     async function exportToPDF() {
       const btn = document.querySelector('button[onclick="exportToPDF()"]');
       if (!btn) return;
@@ -3367,10 +3374,6 @@ function populateMonthFilter() {
           await new Promise(r => setTimeout(r, 500)); 
         }
 
-        if (typeof window.html2pdf === 'undefined') {
-          throw new Error("ไม่สามารถโหลดตัวสร้าง PDF ได้");
-        }
-
         let elementId = 'reportSummary';
         if (document.getElementById('reportChecked').style.display !== 'none') elementId = 'reportChecked';
         if (document.getElementById('reportAreaTrend').style.display !== 'none') elementId = 'reportAreaTrend';
@@ -3381,25 +3384,19 @@ function populateMonthFilter() {
         const buttonsToHide = element.querySelectorAll('.btn, select, .report-filters');
         buttonsToHide.forEach(b => b.style.display = 'none');
         
-        // 2. เตรียมรูปภาพให้พร้อมสำหรับ CORS (สำคัญมาก)
+        // 2. อนุญาตให้แคปเจอร์รูปจาก Google Drive
         const allImages = element.querySelectorAll('img');
-        allImages.forEach(img => {
-            img.crossOrigin = "Anonymous"; // บังคับอนุญาต CORS
-        });
+        allImages.forEach(img => img.crossOrigin = "Anonymous");
 
         // 3. กำหนด Opt ของ html2pdf
         const opt = {
-          margin:       [0.3, 0.3, 0.3, 0.3], // Top, Left, Bottom, Right
+          margin:       0.3,
           filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { 
-              scale: 2, 
-              useCORS: true, 
-              allowTaint: true, // ยอมให้วาดรูปจากเว็บอื่นได้
-              logging: false 
-          },
+          html2canvas:  { scale: 2, useCORS: true, allowTaint: true, logging: false },
           jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' },
-          pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // 🟢 ป้องกันการตัดกราฟแหว่ง
+          // 🟢 จุดสำคัญ: สั่งหลีกเลี่ยงการตัดผ่ากลางกล่อง Row, Chart, Card และ Table
+          pagebreak:    { mode: ['css', 'legacy'], avoid: ['.row', '.chart-container', '.card', '.table-wrapper', 'tr'] } 
         };
 
         // สร้าง PDF
@@ -3411,7 +3408,6 @@ function populateMonthFilter() {
 
       } catch (e) {
         alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
-        // แสดงปุ่มกลับมาเหมือนเดิมถ้าพัง
         const element = document.getElementById('reportSummary').parentElement;
         const buttonsToHide = element.querySelectorAll('.btn, select, .report-filters');
         buttonsToHide.forEach(b => b.style.display = '');
@@ -3420,7 +3416,7 @@ function populateMonthFilter() {
         btn.disabled = false;
       }
     }
-
+    
     function renderWaitingData() {
       const tbody = document.getElementById('waitingTableBody');
       
