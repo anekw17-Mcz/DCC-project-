@@ -5944,23 +5944,17 @@ function updateKpiCards(monthKey) {
     const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
     if(!selRows.length) { drawNoData('radarScorecardChart','ไม่มีข้อมูล'); return; }
 
-    const deptSet = [...new Set(selRows.map(r=>(r[6]||'').trim()).filter(Boolean))];
+    const deptSet = [...new Set(selRows.map(r=>String(r[6]||'').trim()).filter(Boolean))];
     const topDepts = deptSet.slice(0,5);
-
-    // Metrics per dept (normalized 0-100, higher=better)
-    // 1. Quality Score = 100 - error rate (capped at 0)
-    // 2. Coverage % = units / max_units * 100
-    // 3. Completion = units checked / plan * 100
-    // 4. Consistency = 100 if error rate < 5, else decreasing
-    // 5. Volume = relative volume score
 
     const deptStats = {};
     topDepts.forEach(d=>{
-      const dr = selRows.filter(r=>(r[6]||'').trim()===d);
-      const units = dr.reduce((s,r)=>s+(parseFloat(r[10])||0),0);
-      const errs  = dr.reduce((s,r)=>s+(parseFloat(r[11])||0),0);
-      const plan  = dr.reduce((s,r)=>s+(parseFloat(r[9])||0),0);
-      const rate  = units>0 ? errs/units*100 : 0;
+      const dr = selRows.filter(r=>String(r[6]||'').trim()===d);
+      // 🟢 แก้ไข: ใช้ _toNum() แทน parseFloat() เพื่อจัดการลูกน้ำและค่าว่าง
+      const units = dr.reduce((s,r)=>s+_toNum(r[10], 0),0);
+      const errs  = dr.reduce((s,r)=>s+_toNum(r[11], 0),0);
+      const plan  = dr.reduce((s,r)=>s+_toNum(r[9], 0),0);
+      const rate  = units>0 ? (errs/units*100) : 0;
       deptStats[d] = { units, errs, plan, rate };
     });
 
@@ -5969,20 +5963,23 @@ function updateKpiCards(monthKey) {
     const pal = ['#1d4ed8','#7c3aed','#059669','#dc2626','#f59e0b'];
 
     const datasets = topDepts.map((d,i)=>{
-      const s = deptStats[d];
-      const qual  = Math.max(0, 100 - s.rate*10);      // quality: penalize per % error
-      const vol   = s.units/maxUnits*100;               // volume score
+      const s = deptStats[d] || { units:0, errs:0, plan:0, rate:0 };
+      const qual  = Math.max(0, 100 - s.rate*10);
+      const vol   = s.units/maxUnits*100;
       const compl = s.plan>0 ? Math.min(100,s.units/s.plan*100) : vol;
-      const consis = s.rate<1?100:s.rate<3?80:s.rate<5?60:40;
+      const consis = s.rate<1?100 : s.rate<3?80 : s.rate<5?60 : 40;
       const eff   = s.units>0 && s.errs>=0 ? Math.max(0,100-s.errs/s.units*200) : 50;
+      
       return {
-        label: d,
-        data: [qual.toFixed(1), vol.toFixed(1), compl.toFixed(1), consis.toFixed(1), eff.toFixed(1)].map(Number),
-        borderColor: pal[i],
-        backgroundColor: pal[i]+'25',
+        // 🟢 แก้ไข: บังคับให้ชื่อเป็น String ป้องกันขึ้น undefined
+        label: String(d || 'Unknown'),
+        // 🟢 แก้ไข: บังคับแปลงเป็น Number ป้องกัน NaN ไหลเข้ากราฟ
+        data: [qual, vol, compl, consis, eff].map(v => Number(v.toFixed(1)) || 0),
+        borderColor: pal[i%pal.length],
+        backgroundColor: pal[i%pal.length]+'25',
         borderWidth: 2,
         pointRadius: 4,
-        pointBackgroundColor: pal[i]
+        pointBackgroundColor: pal[i%pal.length]
       };
     });
 
@@ -5991,7 +5988,7 @@ function updateKpiCards(monthKey) {
       type:'radar',
       data:{
         labels:['Quality Score','Volume','Completion','Consistency','Efficiency'],
-        datasets
+        datasets: datasets
       },
       options:{ responsive:true, maintainAspectRatio:false,
         scales:{ r:{
@@ -6017,17 +6014,20 @@ function updateKpiCards(monthKey) {
     // Group by Func
     const byFunc = {};
     selRows.forEach(r=>{
-      const fn=(r[7]||'Unknown').toString().trim();
-      const dept=(r[6]||'').trim();
+      const fn=String(r[7]||'Unknown').trim();
+      const dept=String(r[6]||'').trim();
       const key = dept ? dept+'·'+fn : fn;
       const lbl = key.length>40 ? key.slice(0,37)+'…' : key;
       if(!byFunc[lbl]) byFunc[lbl]={units:0,errors:0};
-      byFunc[lbl].units  += parseFloat(r[10])||0;
-      byFunc[lbl].errors += parseFloat(r[11])||0;
+      
+      // 🟢 แก้ไข: ใช้ _toNum() แทน parseFloat() ป้องกัน NaN
+      byFunc[lbl].units  += _toNum(r[10], 0);
+      byFunc[lbl].errors += _toNum(r[11], 0);
     });
 
     const funcs = Object.entries(byFunc)
-      .map(([k,v])=>({k, rate:v.units>0?+(v.errors/v.units*100).toFixed(2):0, units:v.units, errors:v.errors}))
+      // 🟢 แก้ไข: บังคับ key ให้เป็น String(k) ป้องกันบั๊ก [object Object]
+      .map(([k,v])=>({k: String(k), rate: v.units>0 ? +(v.errors/v.units*100).toFixed(2) : 0, units: v.units, errors: v.errors}))
       .sort((a,b)=>b.rate-a.rate).slice(0,10);
 
     if(!funcs.length) { drawNoData('funcBreakdownChart','ไม่มีข้อมูล'); return; }
@@ -6039,9 +6039,10 @@ function updateKpiCards(monthKey) {
     _aC['funcbreak'] = createChart(ctx, {
       type:'bar',
       data:{
-        labels: funcs.map(f=>f.k),
+        labels: funcs.map(f => f.k),
         datasets:[
-          { label:'Error Rate (%)', data:funcs.map(f=>f.rate),
+          // 🟢 แก้ไข: ดักค่า NaN ให้กลายเป็น 0
+          { label:'Error Rate (%)', data: funcs.map(f => f.rate || 0),
             backgroundColor:barClrs, borderWidth:0, borderRadius:5 }
         ]
       },
@@ -6054,14 +6055,14 @@ function updateKpiCards(monthKey) {
         plugins:{
           legend:{position:'bottom',labels:{font:{size:10},boxWidth:10}},
           tooltip:{callbacks:{label:c=>{
-            if(c.datasetIndex===0) return 'Error Rate: '+c.raw+'%'+(c.raw>TARGET?' ⚠️':' ✅');
-            return 'Units: '+c.raw.toLocaleString();
+            if(c.datasetIndex===0) return 'Error Rate: '+(c.raw||0)+'%'+(c.raw>TARGET?' ⚠️':' ✅');
+            return 'Units: '+(c.raw||0).toLocaleString();
           }}}
         }
       }
     });
   }
-
+  
   // ── SubFunc Heatmap ───────────────────────────────────────────
   function renderSubFuncHeatmap(rows, selM) {
     const container = document.getElementById('subfuncHeatmapContainer');
