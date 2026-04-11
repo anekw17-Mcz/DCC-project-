@@ -643,6 +643,10 @@
         border: 1px solid var(--border-light);
         transition: box-shadow 0.2s, transform 0.2s;
         overflow: hidden;
+        
+        /* 🟢 เพิ่ม 2 บรรทัดนี้ เพื่อกันกราฟแหว่งตอน Print PDF */
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
     .chart-container:hover {
         box-shadow: var(--shadow-lg);
@@ -3349,18 +3353,22 @@ function populateMonthFilter() {
         btn.disabled = false;
       }
     }
-      // 2. Export to PDF (ใช้ html2pdf จัดหน้า A4 สวยงาม)
+      // 2. Export to PDF (เวอร์ชันแก้ปัญหากราฟแหว่ง + รูปหาย)
     async function exportToPDF() {
       const btn = document.querySelector('button[onclick="exportToPDF()"]');
       if (!btn) return;
       const originalText = btn.innerHTML;
-      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังสร้าง PDF...';
+      btn.innerHTML = '<i class="spinner-border spinner-border-sm me-1"></i>กำลังเตรียม PDF...';
       btn.disabled = true;
 
       try {
-        // โหลด Library html2pdf
-        if (typeof html2pdf === 'undefined') {
+        if (typeof window.html2pdf === 'undefined') {
           await __loadScriptOnce('lib-html2pdf', 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+          await new Promise(r => setTimeout(r, 500)); 
+        }
+
+        if (typeof window.html2pdf === 'undefined') {
+          throw new Error("ไม่สามารถโหลดตัวสร้าง PDF ได้");
         }
 
         let elementId = 'reportSummary';
@@ -3369,19 +3377,33 @@ function populateMonthFilter() {
         
         const element = document.getElementById(elementId);
         
-        // ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
-        const buttonsToHide = element.querySelectorAll('.btn, select');
+        // 1. ซ่อนปุ่มต่างๆ ก่อนแคปเจอร์
+        const buttonsToHide = element.querySelectorAll('.btn, select, .report-filters');
         buttonsToHide.forEach(b => b.style.display = 'none');
+        
+        // 2. เตรียมรูปภาพให้พร้อมสำหรับ CORS (สำคัญมาก)
+        const allImages = element.querySelectorAll('img');
+        allImages.forEach(img => {
+            img.crossOrigin = "Anonymous"; // บังคับอนุญาต CORS
+        });
 
+        // 3. กำหนด Opt ของ html2pdf
         const opt = {
-          margin:       0.3,
+          margin:       [0.3, 0.3, 0.3, 0.3], // Top, Left, Bottom, Right
           filename:     `SCD_Dashboard_${new Date().toISOString().slice(0,10)}.pdf`,
           image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+          html2canvas:  { 
+              scale: 2, 
+              useCORS: true, 
+              allowTaint: true, // ยอมให้วาดรูปจากเว็บอื่นได้
+              logging: false 
+          },
+          jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' },
+          pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // 🟢 ป้องกันการตัดกราฟแหว่ง
         };
 
-        await html2pdf().set(opt).from(element).save();
+        // สร้าง PDF
+        await window.html2pdf().set(opt).from(element).save();
         showSuccessMessage('Export PDF สำเร็จ');
 
         // แสดงปุ่มกลับมาเหมือนเดิม
@@ -3389,6 +3411,10 @@ function populateMonthFilter() {
 
       } catch (e) {
         alert("เกิดข้อผิดพลาดในการ Export PDF: " + e.message);
+        // แสดงปุ่มกลับมาเหมือนเดิมถ้าพัง
+        const element = document.getElementById('reportSummary').parentElement;
+        const buttonsToHide = element.querySelectorAll('.btn, select, .report-filters');
+        buttonsToHide.forEach(b => b.style.display = '');
       } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;
@@ -6125,7 +6151,7 @@ function updateKpiCards(monthKey) {
     });
   }
   
-  // ── SubFunc Heatmap ───────────────────────────────────────────
+  // ── SubFunc Heatmap (แก้ไขใหม่) ───────────────────────────────────────────
   function renderSubFuncHeatmap(rows, selM) {
     const container = document.getElementById('subfuncHeatmapContainer');
     if(!container) return;
@@ -6136,14 +6162,13 @@ function updateKpiCards(monthKey) {
       return;
     }
 
-    // Build dept × subfunc matrix
     const depts   = [...new Set(selRows.map(r=>(r[6]||'').trim()).filter(Boolean))].slice(0,8);
     const subfuncs = [...new Set(selRows.map(r=>{
       const sf=(r[8]||'').toString().trim();
       return sf.length>40 ? sf.slice(0,37)+'…' : sf;
     }).filter(Boolean))].slice(0,15);
 
-    const matrix = {}; // dept → subfunc → {units, errors}
+    const matrix = {}; 
     selRows.forEach(r=>{
       const d=(r[6]||'').trim(), sf=(r[8]||'').toString().trim();
       if(!d||!sf) return;
@@ -6154,7 +6179,6 @@ function updateKpiCards(monthKey) {
       matrix[d][sfKey].errors += parseFloat(r[11])||0;
     });
 
-    // Render HTML table
     let html = '<table class="heatmap-table"><thead><tr><th>Dept \\ SubFunc</th>';
     subfuncs.forEach(sf => { html += '<th title="'+sf+'">'+sf.slice(0,18)+'</th>'; });
     html += '</tr></thead><tbody>';
@@ -6167,16 +6191,13 @@ function updateKpiCards(monthKey) {
           html += '<td style="color:#cbd5e1;background:#f8fafc">—</td>';
         } else {
           const rate = +(cell.errors/cell.units*100).toFixed(2);
-          // Color: 0%=white, 2%=yellow, 5%=orange, 10%=red
           const r255 = Math.min(255, Math.round(rate/10*255));
-          const g255 = Math.max(0, Math.round(255 - rate/10*255));
           const bgClr = rate===0 ? '#f0fdf4'
             : rate<2 ? `rgb(${180+r255*.3|0},${230},${180+r255*.3|0})`
             : rate<5 ? `rgb(255,${Math.max(160,255-rate*15)|0},100)`
             : `rgb(${Math.min(220,180+rate*3|0)},${Math.max(50,130-rate*10)|0},50)`;
           const txClr = rate<3 ? '#1e293b' : '#fff';
-          const tooltip = `${d}·${sf}: ${rate}% (${cell.units}u/${cell.errors}e)`;
-          html += `<td style="background:${bgClr};color:${txClr}" title="${tooltip}">${rate.toFixed(1)}%</td>`;
+          html += `<td style="background:${bgClr};color:${txClr}">${rate.toFixed(1)}%</td>`;
         }
       });
       html += '</tr>';
@@ -6184,7 +6205,8 @@ function updateKpiCards(monthKey) {
     html += '</tbody></table>';
     container.innerHTML = html;
   }
-  // ── Pareto Drill-down (Stacked Bar) ───────────────────────────
+
+  // ── Pareto Drill-down (แก้ไขใหม่) ───────────────────────────
   function renderParetoDrillDown(rows, selM) {
     const ctx = document.getElementById('paretoDrillDownChart')?.getContext('2d');
     if(!ctx) return;
@@ -6192,7 +6214,6 @@ function updateKpiCards(monthKey) {
     const selRows = rows.filter(r=>(r[1]||'').trim()===selM);
     if(!selRows.length) { drawNoData('paretoDrillDownChart','ไม่มีข้อมูล'); return; }
 
-    // 1. หา Top Departments ที่มี Error รวมสูงสุด (แกน X)
     const deptErrors = {};
     selRows.forEach(r=>{
       const d = (r[6]||'Unknown').trim();
@@ -6202,12 +6223,11 @@ function updateKpiCards(monthKey) {
     const topDepts = Object.entries(deptErrors)
       .filter(x => x[1] > 0)
       .sort((a,b) => b[1] - a[1])
-      .slice(0, 10) // เอามาวิเคราะห์ 10 แผนกแรกที่มีปัญหาเยอะสุด
+      .slice(0, 10)
       .map(x => x[0]);
 
     if(!topDepts.length) { drawNoData('paretoDrillDownChart','ไม่มี Error ในเดือนที่เลือก'); return; }
 
-    // 2. หาสาเหตุ (Sub-Function) ทั้งหมดในแผนกเหล่านั้น
     const subFuncs = new Set();
     selRows.forEach(r => {
       const d = (r[6]||'Unknown').trim();
@@ -6217,7 +6237,6 @@ function updateKpiCards(monthKey) {
     });
     const sfArray = Array.from(subFuncs);
 
-    // 3. เตรียมชุดข้อมูลแยกตามสี (1 สี = 1 Sub-function)
     const pal = ['#dc2626','#f59e0b','#1d4ed8','#059669','#7c3aed','#be185d','#0891b2','#d946ef','#f97316','#84cc16'];
     
     const datasets = sfArray.map((sf, i) => {
@@ -6233,15 +6252,11 @@ function updateKpiCards(monthKey) {
         borderWidth: 1,
         borderColor: '#ffffff'
       };
-    }).filter(ds => ds.data.some(v => v > 0)); // กรองเอาเฉพาะข้อมูลที่มีค่า > 0
+    }).filter(ds => ds.data.some(v => v > 0)); 
 
-    // วาดกราฟ
     createChart(ctx, {
       type: 'bar',
-      data: {
-        labels: topDepts,
-        datasets: datasets
-      },
+      data: { labels: topDepts, datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
@@ -6251,11 +6266,7 @@ function updateKpiCards(monthKey) {
         },
         plugins: {
           legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 12 } },
-          tooltip: {
-            callbacks: {
-              label: c => c.raw > 0 ? ` ${c.dataset.label}: ${c.raw} Errors` : ''
-            }
-          }
+          tooltip: { callbacks: { label: c => c.raw > 0 ? ` ${c.dataset.label}: ${c.raw} Errors` : '' } }
         }
       }
     });
