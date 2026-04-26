@@ -471,4 +471,60 @@ function calculateSummary(dccData) {
     }
   });
   return summary;
+
+  // =================================================================
+// 🧠 GEMINI AI INTEGRATION (Dashboard AI - Presentation Mode)
+// =================================================================
+function generateGeminiInsight(dataContext) {
+  // 🚨 ใส่ API Key ที่คุณก๊อปปี้มาจาก Google AI Studio ตรงนี้ในเครื่องหมายคำพูด
+  const apiKey = "AIzaSyBSdUq2RGmKZeMB_IqCcSXdzOVMknLi0CM"; 
+  
+  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+  
+  // สร้าง Prompt โดยสวมบทบาทให้ AI เป็นผู้เชี่ยวชาญด้านคลังสินค้า (ASRS & Logistics)
+  const systemPrompt = `คุณเป็นผู้จัดการฝ่ายคุณภาพคลังสินค้า (ASRS & Logistics) และผู้เชี่ยวชาญด้านการควบคุมมาตรฐาน (DCC)
+จงสรุปข้อมูลต่อไปนี้เพื่อใช้สำหรับนำเสนอผู้บริหาร (Executive Summary) โดยใช้ภาษาที่เป็นทางการ กระชับ เข้าใจง่าย ดูเป็นมืออาชีพ 
+และมีการใช้ Emoji ประกอบหัวข้อให้สวยงามน่าอ่าน
+
+กรุณาแบ่งการนำเสนอเป็น 4 หัวข้อดังนี้:
+1. 📊 ภาพรวมและสรุปผลงาน (Executive Summary)
+2. 🚨 จุดวิกฤตที่ต้องเฝ้าระวัง (Critical Hotspots - ระบุแผนกหรือพื้นที่ที่เกิดปัญหา)
+3. 🔍 วิเคราะห์สาเหตุเบื้องต้น (Root Cause Analysis - ช่วยสร้างสมมติฐานจากปัญหาที่พบ)
+4. 💡 แผนปฏิบัติการที่แนะนำ (Recommended Action Plan - เสนอแนะวิธีแก้ปัญหาให้ Operations)
+
+ข้อมูลประกอบการวิเคราะห์ประจำเดือน:
+${dataContext}
+
+(หมายเหตุ: จัดรูปแบบการตอบด้วย HTML เบื้องต้น เช่น ใช้ <b> สำหรับตัวหนา, <br> สำหรับขึ้นบรรทัดใหม่ หรือ <ul><li> สำหรับรายการ เพื่อให้นำไปแสดงบนหน้าเว็บได้สวยงาม)`;
+
+  const payload = {
+    "contents": [{
+      "parts": [{ "text": systemPrompt }]
+    }],
+    "generationConfig": {
+      "temperature": 0.7, // ความคิดสร้างสรรค์ (0.0-1.0)
+      "maxOutputTokens": 2048
+    }
+  };
+  
+  const options = {
+    "method": "post",
+    "contentType": "application/json",
+    "payload": JSON.stringify(payload),
+    "muteHttpExceptions": true
+  };
+  
+  try {
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const result = JSON.parse(response.getContentText());
+    
+    if (result.candidates && result.candidates.length > 0) {
+      return result.candidates[0].content.parts[0].text;
+    } else {
+      return "<b>เกิดข้อผิดพลาดจาก AI:</b> <br>" + response.getContentText();
+    }
+  } catch (e) {
+    return "<b>ขัดข้องในการเชื่อมต่อกับระบบ AI:</b> <br>" + e.toString();
+  }
+}
 }
