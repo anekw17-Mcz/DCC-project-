@@ -1367,21 +1367,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
             </div>
         </div>
 
-        <div id="presentationArea" style="display:none;">
-            <div class="p-4 bg-white rounded border shadow-sm">
-                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                    <h5 class="text-primary mb-0"><i class="fas fa-file-alt me-2"></i> สรุปเนื้อหาสำหรับนำเสนองาน (Executive Summary)</h5>
-                    <button class="btn btn-outline-secondary btn-sm" onclick="copyAIText()">
-                        <i class="fas fa-copy me-1"></i> คัดลอกเนื้อหา
-                    </button>
-                </div>
-                <div id="aiPresentationContent" class="lh-lg text-dark"></div>
-            </div>
-        </div>
-
-    </div>
-</div>
-
 <div class="modal fade" id="aiLoadingModal" data-bs-backdrop="static" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content text-center p-5">
@@ -2113,16 +2098,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
           <div id="aiPresentationContent" style="display: none; font-size: 0.95rem; line-height: 1.7; color: #1e293b;">
             </div>
         </div>
-        <div class="modal-footer" style="background-color: #f1f5f9; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px;">
-          <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
-          <button type="button" class="btn btn-primary rounded-pill px-4" onclick="copyAIText()" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); border: none;">
-            <i class="bi bi-clipboard me-2"></i>คัดลอกข้อความ
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <script>
     // --- เพิ่มไว้ใต้แท็ก <script> ---
 function getDirectImgUrl(driveUrl) {
@@ -6505,78 +6480,56 @@ function updateKpiCards(monthKey) {
     content.innerHTML = html;
   }
 
-  // =========================================================
-    // NEW: GEMINI AI DASHBOARD (REAL-AI)
+  <div class="modal fade" id="aiLoadingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4" style="border-radius: 20px;">
+      <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+      <h5 class="fw-bold">AI กำลังวิเคราะห์ข้อมูลพรีเซนต์งาน...</h5>
+      <p class="text-muted small">ระบบกำลังเชื่อมต่อกับ Gemini 1.5 Flash</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// =========================================================
+    // 🚀 ฟังก์ชันควบคุม AI Dashboard (แก้ไข Syntax Error แล้ว)
     // =========================================================
     function requestRealAIPresentation() {
-      const modalEl = document.getElementById('aiPresentationModal');
-      if (!modalEl) return;
-      const myModal = new bootstrap.Modal(modalEl);
-      
-      document.getElementById('aiPresentationLoading').style.display = 'block';
-      document.getElementById('aiPresentationContent').style.display = 'none';
-      document.getElementById('aiPresentationContent').innerHTML = '';
-      myModal.show();
+        const modalEl = document.getElementById('aiLoadingModal');
+        if (!modalEl) return;
+        const myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
 
-      const selM = document.getElementById('primaryMonthSelect')?.value || 'ล่าสุด';
-      const totalErr = document.getElementById('totalErrorsMonth1')?.innerText || '0';
-      const totalUnit = document.getElementById('totalUnitsMonth1')?.innerText || '0';
-      const errRate = document.getElementById('errorRateMonth1')?.innerText || '0%';
+        const month = document.getElementById('primaryMonthSelect')?.value || 'ล่าสุด';
+        const unit = document.getElementById('totalUnitsMonth1')?.innerText || '0';
+        const err = document.getElementById('totalErrorsMonth1')?.innerText || '0';
+        const rate = document.getElementById('errorRateMonth1')?.innerText || '0%';
+        
+        const context = `เดือน: ${month}, สุ่มตรวจ: ${unit} units, พบ Error: ${err} units, อัตราของเสีย: ${rate}`;
 
-      const dataContext = `- เดือน: ${selM}, ตรวจ: ${totalUnit}, พบ Error: ${totalErr}, อัตรา: ${errRate}`;
-
-      google.script.run
-        .withSuccessHandler(function(aiResponse) {
-          document.getElementById('aiPresentationLoading').style.display = 'none';
-          document.getElementById('aiPresentationContent').style.display = 'block';
-          document.getElementById('aiPresentationContent').innerHTML = aiResponse;
-        })
-        .withFailureHandler(function(err) {
-          document.getElementById('aiPresentationLoading').style.display = 'none';
-          document.getElementById('aiPresentationContent').style.display = 'block';
-          document.getElementById('aiPresentationContent').innerHTML = "Error: " + err;
-        })
-        .generateGeminiInsight(dataContext);
+        google.script.run
+            .withSuccessHandler(function(res) {
+                myModal.hide();
+                const presArea = document.getElementById('presentationArea');
+                const presContent = document.getElementById('aiPresentationContent');
+                if (presArea && presContent) {
+                    presArea.style.display = 'block';
+                    presContent.innerHTML = res;
+                    presArea.scrollIntoView({ behavior: 'smooth' });
+                }
+            })
+            .withFailureHandler(function(e) {
+                myModal.hide();
+                alert("AI Error: " + e);
+            })
+            .generateGeminiInsight(context);
     }
 
     function copyAIText() {
-      const content = document.getElementById('aiPresentationContent').innerText;
-      navigator.clipboard.writeText(content).then(() => { alert("คัดลอกแล้ว!"); });
+        const content = document.getElementById('aiPresentationContent');
+        if (!content) return;
+        navigator.clipboard.writeText(content.innerText).then(() => alert("คัดลอกสำเร็จ!"));
     }
-    // ฟังก์ชันเรียกใช้ AI สำหรับนำเสนอ
-function requestRealAIPresentation() {
-    // 1. แสดง Modal โหลดข้อมูล
-    const loadingModal = new bootstrap.Modal(document.getElementById('aiLoadingModal'));
-    loadingModal.show();
-
-    // 2. รวบรวมข้อมูลจากหน้าจอเพื่อส่งให้ AI (ดึงค่าจากตารางสรุปข้างบน)
-    const currentM = document.getElementById('primaryMonthSelect')?.value || 'เดือนปัจจุบัน';
-    const totalUnit = document.getElementById('totalUnitsMonth1')?.innerText || '0';
-    const totalErr = document.getElementById('totalErrorsMonth1')?.innerText || '0';
-    
-    const dataContext = `เดือน: ${currentM}, ตรวจทั้งหมด: ${totalUnit} หน่วย, พบข้อผิดพลาด: ${totalErr} จุด`;
-
-    // 3. ส่งข้อมูลไปที่ Code.gs เพื่อคุยกับ Gemini API
-    google.script.run
-        .withSuccessHandler(function(aiResponse) {
-            loadingModal.hide(); // ปิดหน้าจอโหลด
-            document.getElementById('presentationArea').style.display = 'block'; // แสดงพื้นที่เนื้อหา
-            document.getElementById('aiPresentationContent').innerHTML = aiResponse; // วางเนื้อหา AI
-        })
-        .withFailureHandler(function(err) {
-            loadingModal.hide();
-            alert("AI Error: " + err);
-        })
-        .generateGeminiInsight(dataContext);
-}
-
-// ฟังก์ชันคัดลอกข้อความ
-function copyAIText() {
-    const text = document.getElementById('aiPresentationContent').innerText;
-    navigator.clipboard.writeText(text).then(() => {
-        alert("คัดลอกเนื้อหาเรียบร้อยแล้ว! สามารถนำไปวางใน PowerPoint หรือ Email ได้เลย");
-    });
-}
   </script>
-  </body>
+</body>
 </html>
