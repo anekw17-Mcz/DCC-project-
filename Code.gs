@@ -472,3 +472,64 @@ function calculateSummary(dccData) {
   });
   return summary;
 }
+
+function getAIStrategicInsight() {
+  const apiKey = "AIzaSyBSdUq2RGmKZeMB_IqCcSXdzOVMknLi0CM"; // API Key ที่คุณให้มา
+  const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. ดึงข้อมูลล่าสุดจาก 2 Sheet หลัก (ดึงมาเฉพาะส่วนท้ายเพื่อความรวดเร็วและประหยัด Token)
+    const dccSheet = ss.getSheetByName("DCC Data");
+    const areaSheet = ss.getSheetByName("Check Area");
+    
+    const dccData = dccSheet.getLastRow() > 1 ? dccSheet.getRange(Math.max(2, dccSheet.getLastRow() - 20), 1, 20, dccSheet.getLastColumn()).getValues() : [];
+    const areaData = areaSheet.getLastRow() > 1 ? areaSheet.getRange(Math.max(2, areaSheet.getLastRow() - 20), 1, 20, areaSheet.getLastColumn()).getValues() : [];
+
+    // 2. ปรับแต่งบริบท (Context) ของข้อมูลให้ AI เข้าใจง่ายขึ้น
+    let contextText = "ข้อมูลการตรวจสอบล่าสุด:\n\n[DCC Data]\n";
+    dccData.forEach(r => contextText += `- แผนก ${r[6]}, ฟังก์ชัน ${r[7]}, ผลการตรวจ: ${r[11] == 'OK' ? 'ปกติ' : 'พบปัญหา'}, รายละเอียด: ${r[17]}\n`);
+    
+    contextText += "\n[Area Inspection Data]\n";
+    areaData.forEach(r => contextText += `- พื้นที่ ${r[1]}, จุด ${r[2]}, ปัญหาที่พบ: ${r[3]}, Remark: ${r[14]}\n`);
+
+    // 3. กำหนด Prompt (ตามที่คุณต้องการ)
+    const payload = {
+      "contents": [{
+        "parts": [{
+          "text": `คุณเป็นผู้จัดการฝ่ายคุณภาพคลังสินค้า (ASRS & Logistics) และผู้เชี่ยวชาญด้านการควบคุมมาตรฐาน (DCC) 
+          จงสรุปข้อมูลต่อไปนี้เพื่อใช้สำหรับนำเสนอผู้บริหาร (Executive Summary) โดยใช้ภาษาที่เป็นทางการ กระชับ เข้าใจง่าย ดูเป็นมืออาชีพ 
+          และมีการใช้ Emoji ประกอบหัวข้อให้สวยงามน่าอ่าน
+          
+          ข้อมูลที่ต้องวิเคราะห์:
+          ${contextText}
+
+          กรุณาแบ่งการนำเสนอเป็น 4 หัวข้อดังนี้:
+          1. 📊 ภาพรวมและสรุปผลงาน (Executive Summary)
+          2. 🚨 จุดวิกฤตที่ต้องเฝ้าระวัง (Critical Hotspots)
+          3. 🔍 วิเคราะห์สาเหตุเบื้องต้น (Root Cause Analysis)
+          4. 💡 แผนปฏิบัติการที่แนะนำ (Recommended Action Plan)`
+        }]
+      }]
+    };
+
+    const options = {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    };
+
+    const response = UrlFetchApp.fetch(apiUrl, options);
+    const json = JSON.parse(response.getContentText());
+    
+    if (json.candidates && json.candidates[0].content.parts[0].text) {
+      return json.candidates[0].content.parts[0].text;
+    } else {
+      return "ไม่สามารถดึงข้อมูลจาก AI ได้ในขณะนี้: " + response.getContentText();
+    }
+  } catch (e) {
+    return "เกิดข้อผิดพลาดในการประมวลผล: " + e.message;
+  }
+}
