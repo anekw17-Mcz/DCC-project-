@@ -1349,7 +1349,48 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 </div>
               </div>
               
-              
+          <div id="aiDashboardSection" class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i> Executive AI Dashboard</h5>
+        <button type="button" class="btn btn-light btn-sm fw-bold" onclick="requestRealAIPresentation()">
+            <i class="fas fa-magic me-1"></i> Generate AI Presentation
+        </button>
+    </div>
+    <div class="card-body">
+        
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div id="aiInsightBox" class="alert alert-info border-0 shadow-sm">
+                    <h6 class="alert-heading fw-bold"><i class="fas fa-robot me-2"></i> AI Quick Insight:</h6>
+                    <div id="aiInsightText">กำลังดึงข้อมูลสถิติล่าสุด...</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="presentationArea" style="display:none;">
+            <div class="p-4 bg-white rounded border shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="text-primary mb-0"><i class="fas fa-file-alt me-2"></i> สรุปเนื้อหาสำหรับนำเสนองาน (Executive Summary)</h5>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyAIText()">
+                        <i class="fas fa-copy me-1"></i> คัดลอกเนื้อหา
+                    </button>
+                </div>
+                <div id="aiPresentationContent" class="lh-lg text-dark"></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="aiLoadingModal" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content text-center p-5">
+            <div class="spinner-grow text-primary mx-auto mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
+            <h5 class="fw-bold">Gemini AI กำลังวิเคราะห์ข้อมูล...</h5>
+            <p class="text-muted mb-0">ระบบกำลังจัดเตรียมข้อมูลสรุปสำหรับนำเสนอผู้บริหาร</p>
+        </div>
+    </div>
+</div>    
 
 
 
@@ -1671,7 +1712,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <label class="btn btn-outline-primary btn-sm" for="btnAnalystView" style="font-weight: 600;"><i class="bi bi-search me-1"></i>Analyst View</label>
                   </div>
                 </div>
-                
+
                 <div id="reportSummary" style="display:none;">
 
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
@@ -6493,17 +6534,49 @@ function updateKpiCards(monthKey) {
         .withFailureHandler(function(err) {
           document.getElementById('aiPresentationLoading').style.display = 'none';
           document.getElementById('aiPresentationContent').style.display = 'block';
-          document.getElementById('aiPresentationContent').innerHTML = `<div class="alert alert-danger">Error: ${err}</div>`;
+          document.getElementById('aiPresentationContent').innerHTML = "Error: " + err;
         })
         .generateGeminiInsight(dataContext);
     }
 
     function copyAIText() {
       const content = document.getElementById('aiPresentationContent').innerText;
-      navigator.clipboard.writeText(content).then(() => {
-        alert("คัดลอกข้อความจาก AI เรียบร้อยแล้ว!");
-      });
+      navigator.clipboard.writeText(content).then(() => { alert("คัดลอกแล้ว!"); });
     }
+    // ฟังก์ชันเรียกใช้ AI สำหรับนำเสนอ
+function requestRealAIPresentation() {
+    // 1. แสดง Modal โหลดข้อมูล
+    const loadingModal = new bootstrap.Modal(document.getElementById('aiLoadingModal'));
+    loadingModal.show();
+
+    // 2. รวบรวมข้อมูลจากหน้าจอเพื่อส่งให้ AI (ดึงค่าจากตารางสรุปข้างบน)
+    const currentM = document.getElementById('primaryMonthSelect')?.value || 'เดือนปัจจุบัน';
+    const totalUnit = document.getElementById('totalUnitsMonth1')?.innerText || '0';
+    const totalErr = document.getElementById('totalErrorsMonth1')?.innerText || '0';
+    
+    const dataContext = `เดือน: ${currentM}, ตรวจทั้งหมด: ${totalUnit} หน่วย, พบข้อผิดพลาด: ${totalErr} จุด`;
+
+    // 3. ส่งข้อมูลไปที่ Code.gs เพื่อคุยกับ Gemini API
+    google.script.run
+        .withSuccessHandler(function(aiResponse) {
+            loadingModal.hide(); // ปิดหน้าจอโหลด
+            document.getElementById('presentationArea').style.display = 'block'; // แสดงพื้นที่เนื้อหา
+            document.getElementById('aiPresentationContent').innerHTML = aiResponse; // วางเนื้อหา AI
+        })
+        .withFailureHandler(function(err) {
+            loadingModal.hide();
+            alert("AI Error: " + err);
+        })
+        .generateGeminiInsight(dataContext);
+}
+
+// ฟังก์ชันคัดลอกข้อความ
+function copyAIText() {
+    const text = document.getElementById('aiPresentationContent').innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        alert("คัดลอกเนื้อหาเรียบร้อยแล้ว! สามารถนำไปวางใน PowerPoint หรือ Email ได้เลย");
+    });
+}
   </script>
-</body>
+  </body>
 </html>
