@@ -1349,33 +1349,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                 </div>
               </div>
               
-          <div id="aiDashboardSection" class="card shadow-sm mt-4">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i> Executive AI Dashboard</h5>
-        <button type="button" class="btn btn-light btn-sm fw-bold" onclick="requestRealAIPresentation()">
-            <i class="fas fa-magic me-1"></i> Generate AI Presentation
-        </button>
-    </div>
-    <div class="card-body">
-        
-        <div class="row mb-4">
-            <div class="col-md-12">
-                <div id="aiInsightBox" class="alert alert-info border-0 shadow-sm">
-                    <h6 class="alert-heading fw-bold"><i class="fas fa-robot me-2"></i> AI Quick Insight:</h6>
-                    <div id="aiInsightText">กำลังดึงข้อมูลสถิติล่าสุด...</div>
-                </div>
-            </div>
-        </div>
-
-<div class="modal fade" id="aiLoadingModal" data-bs-backdrop="static" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content text-center p-5">
-            <div class="spinner-grow text-primary mx-auto mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
-            <h5 class="fw-bold">Gemini AI กำลังวิเคราะห์ข้อมูล...</h5>
-            <p class="text-muted mb-0">ระบบกำลังจัดเตรียมข้อมูลสรุปสำหรับนำเสนอผู้บริหาร</p>
-        </div>
-    </div>
-</div>    
+              
 
 
 
@@ -1684,51 +1658,14 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
               <!-- SUMMARY SECTION -->
               <div id="reportSummary" style="display:none;">
 
+                <!-- Header -->
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                   <h6 class="fw-bold mb-0" style="color:#0ea5e9">
                     <i class="bi bi-graph-up me-2"></i>Performance Analytics &amp; Insights
                   </h6>
-                  
-                  <div class="btn-group shadow-sm" role="group">
-                    <input type="radio" class="btn-check" name="btnViewMode" id="btnExecView" autocomplete="off" checked onchange="toggleDashboardView('exec')">
-                    <label class="btn btn-outline-primary btn-sm" for="btnExecView" style="font-weight: 600;"><i class="bi bi-briefcase me-1"></i>Executive View</label>
-
-                    <input type="radio" class="btn-check" name="btnViewMode" id="btnAnalystView" autocomplete="off" onchange="toggleDashboardView('analyst')">
-                    <label class="btn btn-outline-primary btn-sm" for="btnAnalystView" style="font-weight: 600;"><i class="bi bi-search me-1"></i>Analyst View</label>
-                  </div>
                 </div>
 
-                <div id="reportSummary" style="display:none;">
-
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                  <h6 class="fw-bold mb-0" style="color:#0ea5e9">
-                    <i class="bi bi-graph-up me-2"></i>Performance Analytics &amp; Insights
-                  </h6>
-                  
-                  <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm text-white shadow-sm" onclick="requestRealAIPresentation()" style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); font-weight: 600; border: none; border-radius: 8px; padding: 6px 16px;">
-                      <i class="bi bi-stars me-1"></i>Generate AI Report
-                    </button>
-
-                    <div class="btn-group shadow-sm" role="group">
-                      <input type="radio" class="btn-check" name="btnViewMode" id="btnExecView" autocomplete="off" checked onchange="toggleDashboardView('exec')">
-                      <label class="btn btn-outline-primary btn-sm" for="btnExecView" style="font-weight: 600;"><i class="bi bi-briefcase me-1"></i>Executive View</label>
-                      <input type="radio" class="btn-check" name="btnViewMode" id="btnAnalystView" autocomplete="off" onchange="toggleDashboardView('analyst')">
-                      <label class="btn btn-outline-primary btn-sm" for="btnAnalystView" style="font-weight: 600;"><i class="bi bi-search me-1"></i>Analyst View</label>
-                    </div>
-                  </div>
-                </div>
-
-                <div id="aiInsightBox" class="mb-4 p-3" style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-left: 5px solid #0d9488; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="bi bi-robot fs-4 me-2" style="color: #0f766e;"></i>
-                        <strong style="color: #0f766e; font-size: 1.1rem;">AI Auto-Summary (สรุปสถานการณ์ประจำเดือน)</strong>
-                    </div>
-                    <div id="aiInsightContent" style="color: #115e59; font-size: 0.95rem; line-height: 1.6;">
-                        <span class="spinner-border spinner-border-sm text-teal" role="status"></span> กำลังวิเคราะห์ข้อมูลการตรวจสอบ...
-                    </div>
-                </div>
-
+                <!-- Month Filters -->
                 <div class="filter-section mb-4">
                   <div class="row g-3">
                     <div class="col-md-6">
@@ -2080,24 +2017,6 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
       <div style="color:white; margin-bottom:10px; font-weight:bold;"><i class="bi bi-arrows-fullscreen me-2"></i>คลิกที่ใดก็ได้เพื่อปิด</div>
       <img id="fullImageDisplay" src="" style="max-width:95%; max-height:85vh; object-fit:contain; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,0.5);">
   </div>
-  <div class="modal fade" id="aiPresentationModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-      <div class="modal-content" style="border-radius: 20px; border: none; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
-        <div class="modal-header" style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px 24px;">
-          <h5 class="modal-title fw-bold">
-            <i class="bi bi-magic me-2"></i>Gemini AI - Executive Presentation
-          </h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-4" style="background-color: #f8fafc;">
-          <div id="aiPresentationLoading" class="text-center py-5">
-            <div class="spinner-border" style="width: 3rem; height: 3rem; color: #7c3aed;" role="status"></div>
-            <h5 class="mt-4 fw-bold" style="color: #475569;">กำลังรวบรวมข้อมูล Logistics และวิเคราะห์ด้วย AI...</h5>
-            <p class="text-muted">อาจใช้เวลาประมาณ 5-10 วินาที</p>
-          </div>
-          <div id="aiPresentationContent" style="display: none; font-size: 0.95rem; line-height: 1.7; color: #1e293b;">
-            </div>
-        </div>
   <script>
     // --- เพิ่มไว้ใต้แท็ก <script> ---
 function getDirectImgUrl(driveUrl) {
@@ -5150,19 +5069,9 @@ function updateKpiCards(monthKey) {
       try { renderFuncBreakdown(rows, selM); } catch(e) { console.warn('FuncBreak err',e); }
       try { renderSubFuncHeatmap(rows, selM); } catch(e) { console.warn('Heatmap err',e); }
       try { renderParetoDrillDown(rows, selM); } catch(e) { console.warn('Drilldown err',e); }
+    }
 
-      // ==========================================
-      // เพิ่ม 2 บรรทัดนี้ต่อท้ายลงไป เพื่อเรียกใช้ AI และสลับหน้าจอ
-      // ==========================================
-      try { generateAIInsights(selM, rows, allMonths); } catch(e) { console.warn('AI Insight err',e); }
-      
-      try { 
-        const isExec = document.getElementById('btnExecView').checked;
-        toggleDashboardView(isExec ? 'exec' : 'analyst');
-      } catch(e) {}
-      // ==========================================
 
-    } // <--- นี่คือวงเล็บปีกกาปิดของฟังก์ชัน renderSummaryCharts
 
 /* ===== Ultra-light Chart fallback (no external CDN needed) =====
    If Chart.js fails to load (corporate firewall / SSL inspection),
@@ -6363,173 +6272,7 @@ function updateKpiCards(monthKey) {
         }
       }
     });
-  } // <------- 🚨 โค้ดของคุณขาดวงเล็บปีกกาตัวนี้ไป 1 ตัวครับ! ทำให้ AI โดนดึงเข้าไปอยู่ข้างใน
-
-  // =========================================================
-  // NEW: Dashboard View Toggle (Executive vs Analyst)
-  // =========================================================
-  function toggleDashboardView(view) {
-    const advancedElements = [
-      document.getElementById('deptComparisonChart')?.closest('.col-md-6'),
-      document.getElementById('radarScorecardChart')?.closest('.row.g-3.mb-3'),
-      document.getElementById('subfuncHeatmapContainer')?.closest('.chart-container'),
-      document.getElementById('momTableSection')
-    ];
-
-    advancedElements.forEach(el => {
-      if(el) el.style.display = (view === 'exec') ? 'none' : '';
-    });
-
-    const topDeptChart = document.getElementById('topDepartmentsChart')?.closest('.col-md-6, .col-md-12');
-    if(topDeptChart) {
-      topDeptChart.className = (view === 'exec') ? 'col-md-12' : 'col-md-6';
-    }
   }
-
-  // =========================================================
-  // NEW: AI Insight Generator (Fixed Version)
-  // =========================================================
-  function generateAIInsights(selM, rows, allMonths) {
-    const content = document.getElementById('aiInsightContent');
-    if(!content) return;
-
-    if(!rows || rows.length === 0) {
-      content.innerHTML = "ไม่มีข้อมูลการตรวจสอบสำหรับเดือนนี้ครับ";
-      return;
-    }
-
-    let totalUnit = 0;
-    let totalErr = 0;
-    let deptErrors = {};
-
-    rows.forEach(r => {
-       if((r[1]||'').trim() === selM) {
-           const u = Number(r[10]) || 0; 
-           const e = Number(r[11]) || 0; 
-           const dept = (r[6]||'Unknown').trim();
-           
-           totalUnit += u;
-           totalErr += e;
-           
-           if(!deptErrors[dept]) deptErrors[dept] = {u:0, e:0};
-           deptErrors[dept].u += u;
-           deptErrors[dept].e += e;
-       }
-    });
-
-    if(totalUnit === 0) {
-       content.innerHTML = "มีการบันทึกข้อมูลแต่ยังไม่มียอด Unit Check (สุ่มตรวจ) ในระบบครับ";
-       return;
-    }
-
-    const currentRate = (totalErr / totalUnit * 100);
-
-    let topDept = '';
-    let maxRate = -1;
-    let maxErrVol = 0;
-    Object.keys(deptErrors).forEach(d => {
-        const stat = deptErrors[d];
-        if(stat.u > 0) {
-            const r = (stat.e / stat.u * 100);
-            if(r > maxRate && stat.e > 0) { 
-                maxRate = r;
-                topDept = d;
-                maxErrVol = stat.e;
-            }
-        }
-    });
-
-    let trendText = "";
-    const prevMIndex = allMonths.indexOf(selM) - 1;
-    if(prevMIndex >= 0) {
-        const prevM = allMonths[prevMIndex];
-        let pUnit = 0, pErr = 0;
-        rows.forEach(r => {
-            if((r[1]||'').trim() === prevM) {
-                pUnit += Number(r[10]) || 0; 
-                pErr += Number(r[11]) || 0;  
-            }
-        });
-        if(pUnit > 0) {
-            const prevRate = (pErr / pUnit * 100);
-            const diff = currentRate - prevRate;
-            if(diff > 0) {
-                trendText = `<span class="badge bg-danger">แย่ลงจากเดือนที่แล้ว</span> (เพิ่มขึ้น +${diff.toFixed(2)}%)`;
-            } else if (diff < 0) {
-                trendText = `<span class="badge bg-success">ดีขึ้นจากเดือนที่แล้ว</span> (ลดลง ${Math.abs(diff).toFixed(2)}%)`;
-            } else {
-                trendText = `<span class="badge bg-secondary">ทรงตัว</span>`;
-            }
-        }
-    }
-
-    let html = `<ul class="mb-0 ps-3">`;
-    html += `<li class="mb-2"><b>ภาพรวมเดือน ${selM}:</b> มีการตรวจสอบไปแล้ว <b>${totalUnit.toLocaleString()}</b> units พบข้อผิดพลาด ${totalErr.toLocaleString()} units คิดเป็น Error Rate <b>${currentRate.toFixed(2)}%</b> ${trendText}</li>`;
-
-    if(topDept) {
-        html += `<li class="mb-2"><b>🎯 Hotspot แผนกที่ต้องเฝ้าระวัง:</b> แผนก <b>${topDept}</b> มีข้อผิดพลาดสูงสุดที่ <b>${maxRate.toFixed(2)}%</b> (พบ ${maxErrVol} รายการ) <u>ข้อเสนอแนะ:</u> หัวหน้างานควรลงพื้นที่เพื่อวิเคราะห์ Root Cause หรือทบทวนขั้นตอนปฏิบัติงาน (WI) ในจุดนี้</li>`;
-    } else {
-        html += `<li class="mb-2"><b>🌟 ยอดเยี่ยม:</b> ไม่พบข้อผิดพลาดเลยในเดือนนี้ (Zero Defect) ถือว่ารักษามาตรฐานการทำงานได้ดีมากครับ</li>`;
-    }
-
-    if(currentRate > 5) {
-        html += `<li class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i> ภาพรวมของเสียเกินเป้าหมาย (Target 5%) แนะนำให้เรียกประชุมด่วนครับ!</li>`;
-    }
-
-    html += `</ul>`;
-    content.innerHTML = html;
-  }
-
-  <div class="modal fade" id="aiLoadingModal" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content text-center p-4" style="border-radius: 20px;">
-      <div class="spinner-grow text-primary mb-3" style="width: 3rem; height: 3rem;" role="status"></div>
-      <h5 class="fw-bold">AI กำลังวิเคราะห์ข้อมูลพรีเซนต์งาน...</h5>
-      <p class="text-muted small">ระบบกำลังเชื่อมต่อกับ Gemini 1.5 Flash</p>
-    </div>
-  </div>
-</div>
-
-<script>
-// =========================================================
-    // 🚀 ฟังก์ชันควบคุม AI Dashboard (แก้ไข Syntax Error แล้ว)
-    // =========================================================
-    function requestRealAIPresentation() {
-        const modalEl = document.getElementById('aiLoadingModal');
-        if (!modalEl) return;
-        const myModal = new bootstrap.Modal(modalEl);
-        myModal.show();
-
-        const month = document.getElementById('primaryMonthSelect')?.value || 'ล่าสุด';
-        const unit = document.getElementById('totalUnitsMonth1')?.innerText || '0';
-        const err = document.getElementById('totalErrorsMonth1')?.innerText || '0';
-        const rate = document.getElementById('errorRateMonth1')?.innerText || '0%';
-        
-        const context = `เดือน: ${month}, สุ่มตรวจ: ${unit} units, พบ Error: ${err} units, อัตราของเสีย: ${rate}`;
-
-        google.script.run
-            .withSuccessHandler(function(res) {
-                myModal.hide();
-                const presArea = document.getElementById('presentationArea');
-                const presContent = document.getElementById('aiPresentationContent');
-                if (presArea && presContent) {
-                    presArea.style.display = 'block';
-                    presContent.innerHTML = res;
-                    presArea.scrollIntoView({ behavior: 'smooth' });
-                }
-            })
-            .withFailureHandler(function(e) {
-                myModal.hide();
-                alert("AI Error: " + e);
-            })
-            .generateGeminiInsight(context);
-    }
-
-    function copyAIText() {
-        const content = document.getElementById('aiPresentationContent');
-        if (!content) return;
-        navigator.clipboard.writeText(content.innerText).then(() => alert("คัดลอกสำเร็จ!"));
-    }
-  </script>
+</script>
 </body>
 </html>
