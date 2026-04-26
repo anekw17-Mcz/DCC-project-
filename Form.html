@@ -1671,6 +1671,27 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                     <label class="btn btn-outline-primary btn-sm" for="btnAnalystView" style="font-weight: 600;"><i class="bi bi-search me-1"></i>Analyst View</label>
                   </div>
                 </div>
+                
+                <div id="reportSummary" style="display:none;">
+
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                  <h6 class="fw-bold mb-0" style="color:#0ea5e9">
+                    <i class="bi bi-graph-up me-2"></i>Performance Analytics &amp; Insights
+                  </h6>
+                  
+                  <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-sm text-white shadow-sm" onclick="requestRealAIPresentation()" style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); font-weight: 600; border: none; border-radius: 8px; padding: 6px 16px;">
+                      <i class="bi bi-stars me-1"></i>Generate AI Report
+                    </button>
+
+                    <div class="btn-group shadow-sm" role="group">
+                      <input type="radio" class="btn-check" name="btnViewMode" id="btnExecView" autocomplete="off" checked onchange="toggleDashboardView('exec')">
+                      <label class="btn btn-outline-primary btn-sm" for="btnExecView" style="font-weight: 600;"><i class="bi bi-briefcase me-1"></i>Executive View</label>
+                      <input type="radio" class="btn-check" name="btnViewMode" id="btnAnalystView" autocomplete="off" onchange="toggleDashboardView('analyst')">
+                      <label class="btn btn-outline-primary btn-sm" for="btnAnalystView" style="font-weight: 600;"><i class="bi bi-search me-1"></i>Analyst View</label>
+                    </div>
+                  </div>
+                </div>
 
                 <div id="aiInsightBox" class="mb-4 p-3" style="background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-left: 5px solid #0d9488; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                     <div class="d-flex align-items-center mb-2">
@@ -1681,28 +1702,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
                         <span class="spinner-border spinner-border-sm text-teal" role="status"></span> กำลังวิเคราะห์ข้อมูลการตรวจสอบ...
                     </div>
                 </div>
-                <div id="reportSummary" style="display:none;">
 
-                  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h6 class="fw-bold mb-0" style="color:#0ea5e9">
-                      <i class="bi bi-graph-up me-2"></i>Performance Analytics &amp; Insights
-                    </h6>
-    
-                    <button type="button" class="btn btn-sm text-white shadow-sm" onclick="requestRealAIPresentation()" style="background: linear-gradient(135deg, #7c3aed 0%, #db2777 100%); font-weight: 600; border: none; border-radius: 8px; padding: 6px 16px;">
-                      <i class="bi bi-stars me-1"></i>Generate AI Report
-                    </button>
-    
-                  <div class="btn-group shadow-sm" role="group">
-                     </div>
-                  </div>
-
-                  <div id="aiInsightBox" class="mb-4 p-3" ...> ... </div>
-
-                  <div class="filter-section mb-4">
-                      <div class="row g-3">
-                        </div>
-                   </div>
-                
                 <div class="filter-section mb-4">
                   <div class="row g-3">
                     <div class="col-md-6">
@@ -6468,63 +6468,42 @@ function updateKpiCards(monthKey) {
     // NEW: GEMINI AI DASHBOARD (REAL-AI)
     // =========================================================
     function requestRealAIPresentation() {
-      // 1. เปิดหน้าต่าง Modal โชว์ตอนโหลด
-      const myModal = new bootstrap.Modal(document.getElementById('aiPresentationModal'));
+      const modalEl = document.getElementById('aiPresentationModal');
+      if (!modalEl) return;
+      const myModal = new bootstrap.Modal(modalEl);
+      
       document.getElementById('aiPresentationLoading').style.display = 'block';
       document.getElementById('aiPresentationContent').style.display = 'none';
       document.getElementById('aiPresentationContent').innerHTML = '';
       myModal.show();
 
-      // 2. ดึงข้อมูลปัจจุบันบนหน้าจอเพื่อส่งเป็น Context ให้ AI
-      const selM = document.getElementById('primaryMonthSelect').value || 'ล่าสุด';
-      const typeF = document.getElementById('reportTypeFilter').value || 'ทั้งหมด';
-      
-      const totalErr = document.getElementById('totalErrorsMonth1').innerText;
-      const totalUnit = document.getElementById('totalUnitsMonth1').innerText;
-      const errRate = document.getElementById('errorRateMonth1').innerText;
-      
-      // ดึงแผนกที่แย่ที่สุดจากกราฟ Pareto (ถ้ามี)
-      const topDeptChart = Chart.getChart("topDepartmentsChart");
-      let worstDeptStr = "ไม่มีข้อมูล";
-      if(topDeptChart && topDeptChart.data.labels.length > 0) {
-        worstDeptStr = `${topDeptChart.data.labels[0]} (Error Rate: ${topDeptChart.data.datasets[0].data[0].toFixed(2)}%)`;
-      }
+      const selM = document.getElementById('primaryMonthSelect')?.value || 'ล่าสุด';
+      const totalErr = document.getElementById('totalErrorsMonth1')?.innerText || '0';
+      const totalUnit = document.getElementById('totalUnitsMonth1')?.innerText || '0';
+      const errRate = document.getElementById('errorRateMonth1')?.innerText || '0%';
 
-      // 3. แพ็คข้อมูลใส่กล่อง (Data String)
-      const dataContext = `
-      - ข้อมูลประจำเดือน: ${selM}
-      - ประเภทการตรวจ (Type): ${typeF}
-      - จำนวนที่สุ่มตรวจทั้งหมด: ${totalUnit} units
-      - ข้อผิดพลาดที่พบ: ${totalErr} units
-      - อัตราของเสีย (Error Rate): ${errRate} (เป้าหมายต้องไม่เกิน 5%)
-      - แผนกที่มีของเสียสูงสุดอันดับ 1: ${worstDeptStr}
-      `;
+      const dataContext = `- เดือน: ${selM}, ตรวจ: ${totalUnit}, พบ Error: ${totalErr}, อัตรา: ${errRate}`;
 
-      console.log("ส่งข้อมูลให้ Gemini:", dataContext);
-
-      // 4. ส่งข้อมูลไปหา Code.gs
       google.script.run
         .withSuccessHandler(function(aiResponse) {
           document.getElementById('aiPresentationLoading').style.display = 'none';
           document.getElementById('aiPresentationContent').style.display = 'block';
-          // นำข้อความที่ AI แต่งมาแสดงผล
           document.getElementById('aiPresentationContent').innerHTML = aiResponse;
         })
         .withFailureHandler(function(err) {
           document.getElementById('aiPresentationLoading').style.display = 'none';
           document.getElementById('aiPresentationContent').style.display = 'block';
-          document.getElementById('aiPresentationContent').innerHTML = `<div class="alert alert-danger"><b>Error:</b> ไม่สามารถติดต่อ AI ได้ (${err})</div>`;
+          document.getElementById('aiPresentationContent').innerHTML = `<div class="alert alert-danger">Error: ${err}</div>`;
         })
         .generateGeminiInsight(dataContext);
     }
 
-    // ฟังก์ชันสำหรับกดปุ่มคัดลอกข้อความไปวางใน PowerPoint/Line
     function copyAIText() {
       const content = document.getElementById('aiPresentationContent').innerText;
       navigator.clipboard.writeText(content).then(() => {
-        alert("คัดลอกข้อความลง Clipboard แล้ว! สามารถนำไปวางใน PowerPoint หรือ LINE ได้เลยครับ");
+        alert("คัดลอกข้อความจาก AI เรียบร้อยแล้ว!");
       });
     }
-</script>
+  </script>
 </body>
 </html>
