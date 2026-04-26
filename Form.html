@@ -2601,35 +2601,41 @@ function createChart(ctx, config) {
     }
 
     async function handleSaveArea() {
-      if(!document.getElementById('date').value)    { alert('กรุณาระบุ Date');   return; }
-      if(!document.getElementById('area').value)    { alert('กรุณาเลือก Area'); return; }
-      saveDataCommon('formArea', 'imagesArea');
-    }
+  // ตรวจสอบ Date และ Area (ของเดิมมีอยู่แล้ว)
+  if(!document.getElementById('date').value)     { alert('กรุณาระบุ Date'); return; }
+  if(!document.getElementById('area').value)     { alert('กรุณาเลือก Area'); return; }
 
-    // Populate Zone dropdown based on selected Area
-    function onAreaChange() {
-      const areaVal = document.getElementById('area')?.value || '';
-      const zoneEl  = document.getElementById('zone');
-      if (!zoneEl) return;
-      // Zone options can be loaded from server; for now generate from areaZoneMap
-      const zoneMap = areaZoneMap || {};
-      const zones   = zoneMap[areaVal] || [];
-      zoneEl.innerHTML = '<option value="">-- Zone (Optional) --</option>';
-      zones.forEach(z => zoneEl.add(new Option(z, z)));
-    }
-    let areaZoneMap = {};  // populated from getDropdownData
-    
-    async function handleSaveDCC() {
-      if(!document.getElementById('dccType').value) { 
-        alert("กรุณาเลือก Type"); 
-        return; 
-      }
-      if(!document.getElementById('dccDept').value) { 
-        alert("กรุณาเลือก Department"); 
-        return; 
-      }
-      saveDataCommon('formDCC', 'imagesDCC');
-    }
+  // 1. ตรวจสอบ Location
+  if(!document.getElementById('location').value.trim()) { 
+    alert('กรุณาระบุตำแหน่ง (Location)'); 
+    document.getElementById('location').focus();
+    return; 
+  }
+
+  // 2. ตรวจสอบ Article 1
+  if(!document.getElementById('art1').value.trim()) { 
+    alert('กรุณาระบุ Article 1 หรือสแกน Barcode'); 
+    document.getElementById('art1').focus();
+    return; 
+  }
+
+  // 3. ตรวจสอบ Quantity ของ Article 1
+  if(!document.getElementById('qty1').value.trim()) { 
+    alert('กรุณาระบุจำนวน (Quantity) ของ Article 1'); 
+    document.getElementById('qty1').focus();
+    return; 
+  }
+
+  // 4. ตรวจสอบ Problem
+  if(!document.getElementById('problem').value) { 
+    alert('กรุณาเลือกปัญหาที่พบ (Problem)'); 
+    document.getElementById('problem').focus();
+    return; 
+  }
+
+  // หากข้อมูลบังคับกรอกครบถ้วน ค่อยดำเนินการบันทึกข้อมูล
+  saveDataCommon('formArea', 'imagesArea');
+}
 
     // 1. ฟังก์ชันช่วยบีบอัดรูปภาพก่อนส่ง (เพิ่มใหม่)
     function compressImage(file, maxSize = 1200, quality = 0.7) {
