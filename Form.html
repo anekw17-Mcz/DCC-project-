@@ -6322,7 +6322,7 @@ function updateKpiCards(monthKey) {
     }
 
     // =========================================================
-    // NEW: AI Insight Generator
+    // NEW: AI Insight Generator (Fixed Version)
     // =========================================================
     function generateAIInsights(selM, rows, allMonths) {
       const content = document.getElementById('aiInsightContent');
@@ -6340,8 +6340,8 @@ function updateKpiCards(monthKey) {
 
       rows.forEach(r => {
          if((r[1]||'').trim() === selM) {
-             const u = _toNum(r[10], 0); // Unit Check
-             const e = _toNum(r[11], 0); // Err Unit
+             const u = Number(r[10]) || 0; // แก้ไขตรงนี้: เปลี่ยนเป็น Number()
+             const e = Number(r[11]) || 0; // แก้ไขตรงนี้: เปลี่ยนเป็น Number()
              const dept = (r[6]||'Unknown').trim();
              
              totalUnit += u;
@@ -6368,7 +6368,6 @@ function updateKpiCards(monthKey) {
           const stat = deptErrors[d];
           if(stat.u > 0) {
               const r = (stat.e / stat.u * 100);
-              // ต้องมี Error จริงๆ และเรทสูงสุดถึงจะเตือน
               if(r > maxRate && stat.e > 0) { 
                   maxRate = r;
                   topDept = d;
@@ -6385,8 +6384,8 @@ function updateKpiCards(monthKey) {
           let pUnit = 0, pErr = 0;
           rows.forEach(r => {
               if((r[1]||'').trim() === prevM) {
-                  pUnit += _toNum(r[10], 0);
-                  pErr += _toNum(r[11], 0);
+                  pUnit += Number(r[10]) || 0; // แก้ไขตรงนี้: เปลี่ยนเป็น Number()
+                  pErr += Number(r[11]) || 0;  // แก้ไขตรงนี้: เปลี่ยนเป็น Number()
               }
           });
           if(pUnit > 0) {
@@ -6404,10 +6403,10 @@ function updateKpiCards(monthKey) {
 
       // 4. สร้างข้อความสรุป (จัดรูปแบบให้อ่านง่ายสำหรับผู้บริหาร)
       let html = `<ul class="mb-0 ps-3">`;
-      html += `<li class="mb-2"><b>ภาพรวมเดือน ${selM}:</b> มีการตรวจสอบเอกสาร/สินค้าไปแล้ว <b>${totalUnit.toLocaleString()}</b> units พบข้อผิดพลาด ${totalErr.toLocaleString()} units คิดเป็น Error Rate <b>${currentRate.toFixed(2)}%</b> ${trendText}</li>`;
+      html += `<li class="mb-2"><b>ภาพรวมเดือน ${selM}:</b> มีการตรวจสอบไปแล้ว <b>${totalUnit.toLocaleString()}</b> units พบข้อผิดพลาด ${totalErr.toLocaleString()} units คิดเป็น Error Rate <b>${currentRate.toFixed(2)}%</b> ${trendText}</li>`;
 
       if(topDept) {
-          html += `<li class="mb-2"><b>🎯 Hotspot แผนกที่ต้องเฝ้าระวัง:</b> แผนก <b>${topDept}</b> มีข้อผิดพลาดสูงสุดที่ <b>${maxRate.toFixed(2)}%</b> (พบ ${maxErrVol} รายการ) <u>ข้อเสนอแนะ:</u> หัวหน้างานควรลงพื้นที่เพื่อวิเคราะห์ Root Cause หรือทบทวนขั้นตอนปฏิบัติงาน (WI) และกระบวนการรับ/จัดเก็บสินค้าในจุดนี้</li>`;
+          html += `<li class="mb-2"><b>🎯 Hotspot แผนกที่ต้องเฝ้าระวัง:</b> แผนก <b>${topDept}</b> มีข้อผิดพลาดสูงสุดที่ <b>${maxRate.toFixed(2)}%</b> (พบ ${maxErrVol} รายการ) <u>ข้อเสนอแนะ:</u> หัวหน้างานควรลงพื้นที่เพื่อวิเคราะห์ Root Cause หรือทบทวนขั้นตอนปฏิบัติงาน (WI) ในจุดนี้</li>`;
       } else {
           html += `<li class="mb-2"><b>🌟 ยอดเยี่ยม:</b> ไม่พบข้อผิดพลาดเลยในเดือนนี้ (Zero Defect) ถือว่ารักษามาตรฐานการทำงานได้ดีมากครับ</li>`;
       }
