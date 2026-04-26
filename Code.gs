@@ -448,29 +448,48 @@ function calculateWaiting(dccData, masterData) {
   return waiting;
 }
 
+// ================================================================
+// ฟังก์ชันคำนวณสรุปข้อมูลสำหรับ Dashboard
+// ================================================================
 function calculateSummary(dccData) {
-  const summary = { byMonth:{}, byType:{ PMWI:{}, Checklist:{} } };
+  const summary = { 
+    byMonth: {}, 
+    byType: { PMWI: {}, Checklist: {} } 
+  };
+  
   dccData.forEach(function(row) {
-    const month=row[1]||'', type=row[5]||'', dept=row[6]||'', subfunc=row[8]||'';
-    const unitCheck=parseFloat(row[10])||0, errAmount=parseFloat(row[11])||0;
+    const month = row[1] || '';
+    const type = row[5] || '';
+    const dept = row[6] || '';
+    const subfunc = row[8] || '';
+    const unitCheck = parseFloat(row[10]) || 0;
+    const errAmount = parseFloat(row[11]) || 0;
+    
     if (!month) return;
-    if (!summary.byMonth[month])
-      summary.byMonth[month]={totalUnit:0,totalError:0,pmwiError:0,checklistError:0};
-    summary.byMonth[month].totalUnit  += unitCheck;
+    
+    // สรุปรายเดือน
+    if (!summary.byMonth[month]) {
+      summary.byMonth[month] = { totalUnit: 0, totalError: 0, pmwiError: 0, checklistError: 0 };
+    }
+    summary.byMonth[month].totalUnit += unitCheck;
     summary.byMonth[month].totalError += errAmount;
-    if (type==='PMWI'||type==='PM/WI') {
+    
+    // แยกประเภท
+    if (type === 'PMWI' || type === 'PM/WI') {
       summary.byMonth[month].pmwiError += errAmount;
-      if (!summary.byType.PMWI[dept]) summary.byType.PMWI[dept]={unitCheck:0,error:0};
+      if (!summary.byType.PMWI[dept]) summary.byType.PMWI[dept] = { unitCheck: 0, error: 0 };
       summary.byType.PMWI[dept].unitCheck += unitCheck;
-      summary.byType.PMWI[dept].error     += errAmount;
-    } else if (type==='Checklist') {
+      summary.byType.PMWI[dept].error += errAmount;
+    } else if (type === 'Checklist') {
       summary.byMonth[month].checklistError += errAmount;
-      if (!summary.byType.Checklist[subfunc]) summary.byType.Checklist[subfunc]={unitCheck:0,error:0};
+      if (!summary.byType.Checklist[subfunc]) summary.byType.Checklist[subfunc] = { unitCheck: 0, error: 0 };
       summary.byType.Checklist[subfunc].unitCheck += unitCheck;
-      summary.byType.Checklist[subfunc].error     += errAmount;
+      summary.byType.Checklist[subfunc].error += errAmount;
     }
   });
+
   return summary;
+} // ปิดฟังก์ชัน calculateSummary ให้ถูกต้อง
 
 // =================================================================
 // 🧠 GEMINI AI INTEGRATION (Dashboard AI - Presentation Mode)
@@ -479,23 +498,12 @@ function generateGeminiInsight(dataContext) {
   const apiKey = "AIzaSyBSdUq2RGmKZeMB_IqCcSXdzOVMknLi0CM"; 
   const apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
   
-  const systemPrompt = `คุณเป็นผู้จัดการฝ่ายคุณภาพคลังสินค้า (ASRS & Logistics) และผู้เชี่ยวชาญด้านการควบคุมมาตรฐาน (DCC)
-จงสรุปข้อมูลต่อไปนี้เพื่อใช้สำหรับนำเสนอผู้บริหาร (Executive Summary) โดยใช้ภาษาที่เป็นทางการ กระชับ เข้าใจง่าย ดูเป็นมืออาชีพ 
-และมีการใช้ Emoji ประกอบหัวข้อให้สวยงามน่าอ่าน
-
-กรุณาแบ่งการนำเสนอเป็น 4 หัวข้อดังนี้:
-1. 📊 ภาพรวมและสรุปผลงาน (Executive Summary)
-2. 🚨 จุดวิกฤตที่ต้องเฝ้าระวัง (Critical Hotspots)
-3. 🔍 วิเคราะห์สาเหตุเบื้องต้น (Root Cause Analysis)
-4. 💡 แผนปฏิบัติการที่แนะนำ (Recommended Action Plan)
-
-ข้อมูลประกอบการวิเคราะห์:
-${dataContext}
-
-(ตอบกลับเป็นรูปแบบ HTML เบื้องต้น เช่น <b>, <ul>, <li>)`;
-
   const payload = {
-    "contents": [{ "parts": [{ "text": systemPrompt }] }]
+    "contents": [{
+      "parts": [{
+        "text": "คุณคือผู้เชี่ยวชาญคลังสินค้า สรุปข้อมูลนี้เป็น 4 หัวข้อ (ภาพรวม, จุดวิกฤต, สาเหตุ, แนะนำ) โดยใช้ HTML format: " + dataContext
+      }]
+    }]
   };
   
   const options = {
@@ -507,12 +515,15 @@ ${dataContext}
   
   try {
     const response = UrlFetchApp.fetch(apiUrl, options);
-    const result = JSON.parse(response.getContentText());
-    if (result.candidates && result.candidates.length > 0) {
+    const resText = response.getContentText();
+    const result = JSON.parse(resText);
+    
+    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
       return result.candidates[0].content.parts[0].text;
+    } else {
+      return "<b>AI ไม่สามารถวิเคราะห์ได้:</b><br>" + resText;
     }
-    return "AI ไม่สามารถสร้างคำตอบได้: " + response.getContentText();
   } catch (e) {
-    return "ขัดข้องในการเชื่อมต่อกับระบบ AI: " + e.toString();
+    return "<b>ระบบขัดข้อง:</b> " + e.toString();
   }
-} // <--- ต้องมีปีกกาปิดตัวนี้เสมอ
+}
