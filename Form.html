@@ -6273,8 +6273,7 @@ function updateKpiCards(monthKey) {
     });
   }
 
-// --- ส่วนที่ 1: ฟังก์ชันหลักในการรัน AI ---
-// ฟังก์ชันรัน AI (วางไว้ก่อนปิดแท็ก </script>)
+// --- ฟังก์ชันหลักในการรัน AI Dashboard ---
 function runAIAnalysis() {
   const display = document.getElementById('ai-display');
   const btn = document.getElementById('btn-ai-gen');
@@ -6300,6 +6299,14 @@ function runAIAnalysis() {
         .callGeminiBackend(context);
     })
     .getAIDataContext();
+}
+
+  const options = { 
+    "method": "post", 
+    "contentType": "application/json", 
+    "payload": JSON.stringify(payload), 
+    "muteHttpExceptions": true // สำคัญมาก เพื่อให้อ่าน Error จริงได้
+  };
 }
 
 // ฟังก์ชันเซฟข้อมูล DCC (ที่หายไปทำให้กด Submit ไม่ได้)
