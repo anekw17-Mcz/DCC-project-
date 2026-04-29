@@ -474,83 +474,58 @@ function calculateSummary(dccData) {
 }
 
 // ฟังก์ชันดึงข้อมูล "ทั้งเดือน" เพื่อส่งให้หน้าบ้านเรียกใช้ AI
+// ฟังก์ชันดึงข้อมูลจาก 2 ชีต กรองตามเดือนปัจจุบัน
 function getAIDataContext() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const dccSheet = ss.getSheetByName("DCC Data");
     const areaSheet = ss.getSheetByName("Check Area");
-    
-    // ดึงข้อมูลทั้งหมดในชีต (เริ่มจากแถวที่ 2)
-    const dccData = dccSheet.getLastRow() > 1 ? dccSheet.getRange(2, 1, dccSheet.getLastRow() - 1, dccSheet.getLastColumn()).getValues() : [];
-    const areaData = areaSheet.getLastRow() > 1 ? areaSheet.getRange(2, 1, areaSheet.getLastRow() - 1, areaSheet.getLastColumn()).getValues() : [];
+    const currentMonth = Utilities.formatDate(new Date(), "GMT+7", "MMM-yy"); // เช่น Apr-26
 
-    // หาวันที่และเดือนปัจจุบัน
-    const currentDate = new Date();
-    const currentMonthStr = Utilities.formatDate(currentDate, "GMT+7", "MMM-yy"); // ผลลัพธ์เช่น "Apr-26"
+    let contextText = `รายงานวิเคราะห์คลังสินค้าประจำเดือน: ${currentMonth}\n\n`;
 
-    let contextText = `ข้อมูลสรุปการตรวจสอบประจำเดือน: ${currentMonthStr}\n\n`;
-    let recordCount = 0;
-
-    // 1. กรองข้อมูล DCC: เอาเฉพาะเดือนปัจจุบันและแถวที่มีปัญหา
-    contextText += `[1. ข้อมูล DCC Data]\n`;
-    dccData.forEach(r => {
-      if (String(r[1]).trim() === currentMonthStr) {
-        let errAmount = parseFloat(r[11]) || 0;
-        if (errAmount > 0 || (r[17] && r[17].toString().trim() !== '')) {
-          contextText += `- แผนก: ${r[6]}, จุดตรวจ: ${r[7]}, ปัญหา: ${errAmount} จุด, Remark: ${r[17] || 'ไม่มี'}\n`;
-          recordCount++;
+    // 1. ดึงข้อมูลจาก DCC Data
+    if (dccSheet) {
+      const dccData = dccSheet.getDataRange().getValues();
+      contextText += "--- ส่วนของ DCC Data (ปัญหาที่พบ) ---\n";
+      dccData.forEach((row, i) => {
+        if (i === 0) return; // ข้ามหัวตาราง
+        if (String(row[1]).trim() === currentMonth && (parseFloat(row[11]) > 0)) {
+          contextText += `- แผนก: ${row[6]}, ปัญหา: ${row[8]}, จำนวน Error: ${row[11]}\n`;
         }
-      }
-    });
+      });
+    }
 
-    // 2. กรองข้อมูล Area: เอาเฉพาะเดือนปัจจุบัน
-    contextText += `\n[2. ข้อมูล Area Inspection]\n`;
-    areaData.forEach(r => {
-      if (r[0]) {
-        let rowDate = new Date(r[0]);
-        if(!isNaN(rowDate) && rowDate.getMonth() === currentDate.getMonth() && rowDate.getFullYear() === currentDate.getFullYear()) {
-          contextText += `- พื้นที่: ${r[1]}, จุด: ${r[2]}, ปัญหา: ${r[3]}, Remark: ${r[14] || '-'}\n`;
-          recordCount++;
+    // 2. ดึงข้อมูลจาก Check Area
+    if (areaSheet) {
+      const areaData = areaSheet.getDataRange().getValues();
+      contextText += "\n--- ส่วนของ Area Inspection ---\n";
+      areaData.forEach((row, i) => {
+        if (i === 0) return;
+        const rowDateStr = row[0]; // dd/MM/yyyy
+        if (rowDateStr && rowDateStr.includes("/" + (new Date().getMonth() + 1).toString().padStart(2, '0') + "/")) {
+          contextText += `- พื้นที่: ${row[1]}, จุดตรวจ: ${row[2]}, ปัญหา: ${row[3]}\n`;
         }
-      }
-    });
-
-    return recordCount === 0 ? "NO_DATA" : contextText;
-
-  } catch (e) {
-    return "Error: " + e.message;
-  }
+      });
+    }
+    return contextText;
+  } catch (e) { return "Error: " + e.message; }
 }
+
+// ฟังก์ชันเรียก Gemini API (V1)
 function callGeminiBackend(contextText) {
-  // ใส่ API Key ไว้ที่ฝั่ง Server จะปลอดภัยกว่า
-  const apiKey = "AIzaSyCH3Z7FI9Eio_-uN2Ak8AseKoTwgx5GcxY"; 
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+  const apiKey = "AIzaSyCH3Z7FI9Eio_-uN2Ak8AseKoTwgx5GcxY";
+  const url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
   const payload = {
     "contents": [{
       "parts": [{
-        "text": "คุณเป็นผู้เชี่ยวชาญด้านคลังสินค้า วิเคราะห์ข้อมูลนี้และสรุป Dashboard 4 หัวข้อ (ภาพรวม, จุดวิกฤต, สาเหตุ, แผนงาน):\n\n" + contextText
+        "text": "คุณเป็นผู้เชี่ยวชาญด้านคลังสินค้า สรุปรายงาน Dashboard เป็น 2 หน้า (หน้า 1: ภาพรวมและจุดวิกฤต, หน้า 2: สาเหตุและแผนงานแก้ไข) โดยใช้ข้อมูลนี้:\n\n" + contextText
       }]
     }]
   };
 
-  const options = {
-    "method": "post",
-    "contentType": "application/json",
-    "payload": JSON.stringify(payload),
-    "muteHttpExceptions": true // เปิดไว้เพื่อให้สามารถอ่านข้อความ Error ที่ชัดเจนได้
-  };
-
-  try {
-    const response = UrlFetchApp.fetch(url, options);
-    const json = JSON.parse(response.getContentText());
-
-    if (response.getResponseCode() !== 200) {
-      throw new Error(json.error ? json.error.message : "API Error");
-    }
-
-    return json.candidates[0].content.parts[0].text;
-  } catch (error) {
-    throw new Error("เกิดข้อผิดพลาดในการเรียก AI: " + error.message);
-  }
+  const options = { "method": "post", "contentType": "application/json", "payload": JSON.stringify(payload), "muteHttpExceptions": true };
+  const response = UrlFetchApp.fetch(url, options);
+  return JSON.parse(response.getContentText()).candidates[0].content.parts[0].text;
 }
