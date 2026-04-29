@@ -2633,161 +2633,91 @@ function createChart(ctx, config) {
     }
 
     async function handleSaveArea() {
-  // ตรวจสอบ Date และ Area (ของเดิมมีอยู่แล้ว)
-  if(!document.getElementById('date').value)     { alert('กรุณาระบุ Date'); return; }
-  if(!document.getElementById('area').value)     { alert('กรุณาเลือก Area'); return; }
+  if(!document.getElementById('date').value) { alert('กรุณาระบุ Date'); return; }
+  if(!document.getElementById('area').value) { alert('กรุณาเลือก Area'); return; }
+  if(!document.getElementById('location').value.trim()) { alert('ระบุ Location'); document.getElementById('location').focus(); return; }
+  if(!document.getElementById('art1').value.trim()) { alert('ระบุ Article 1'); document.getElementById('art1').focus(); return; }
+  if(!document.getElementById('qty1').value.trim()) { alert('ระบุจำนวน'); document.getElementById('qty1').focus(); return; }
+  if(!document.getElementById('problem').value) { alert('เลือกปัญหาที่พบ'); return; }
 
-  // 1. ตรวจสอบ Location
-  if(!document.getElementById('location').value.trim()) { 
-    alert('กรุณาระบุตำแหน่ง (Location)'); 
-    document.getElementById('location').focus();
-    return; 
-  }
-
-  // 2. ตรวจสอบ Article 1
-  if(!document.getElementById('art1').value.trim()) { 
-    alert('กรุณาระบุ Article 1 หรือสแกน Barcode'); 
-    document.getElementById('art1').focus();
-    return; 
-  }
-
-  // 3. ตรวจสอบ Quantity ของ Article 1
-  if(!document.getElementById('qty1').value.trim()) { 
-    alert('กรุณาระบุจำนวน (Quantity) ของ Article 1'); 
-    document.getElementById('qty1').focus();
-    return; 
-  }
-
-  // 4. ตรวจสอบ Problem
-  if(!document.getElementById('problem').value) { 
-    alert('กรุณาเลือกปัญหาที่พบ (Problem)'); 
-    document.getElementById('problem').focus();
-    return; 
-  }
-
-  // หากข้อมูลบังคับกรอกครบถ้วน ค่อยดำเนินการบันทึกข้อมูล
   saveDataCommon('formArea', 'imagesArea');
 }
 
-    // 1. ฟังก์ชันช่วยบีบอัดรูปภาพก่อนส่ง (เพิ่มใหม่)
-    function compressImage(file, maxSize = 1200, quality = 0.7) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-          const img = new Image();
-          img.src = event.target.result;
-          img.onload = () => {
-            let width = img.width;
-            let height = img.height;
+async function handleSaveDCC() {
+  if(!document.getElementById('dccDate').value) { alert('กรุณาระบุ Date'); return; }
+  if(!document.getElementById('dccType').value) { alert('กรุณาเลือก Record Type'); return; }
+  if(!document.getElementById('dccDept').value) { alert('กรุณาเลือก Department'); return; }
+  
+  saveDataCommon('formDCC', 'imagesDCC');
+}
 
-            // คำนวณอัตราส่วนเพื่อย่อขนาด
-            if (width > height) {
-              if (width > maxSize) {
-                height = Math.round(height *= maxSize / width);
-                width = maxSize;
-              }
-            } else {
-              if (height > maxSize) {
-                width = Math.round(width *= maxSize / height);
-                height = maxSize;
-              }
-            }
-
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            // แปลงเป็น JPEG และบีบอัด (ลดคุณภาพลงเหลือ 70%)
-            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-            // ตัดส่วนหัว 'data:image/jpeg;base64,' ออกเพื่อส่งให้ Apps Script
-            resolve(compressedBase64.split(',')[1]); 
-          };
-          img.onerror = reject;
-        };
-        reader.onerror = reject;
+async function saveDataCommon(formId, imgId) {
+  const btn = document.querySelector('#' + formId + ' .btn-submit');
+  const lod = document.getElementById('loader');
+  btn.disabled = true; 
+  lod.style.display = 'flex';
+  
+  try {
+    const fileInput = document.getElementById(imgId);
+    const imageFiles = [];
+    const maxImg = (formId === 'formDCC') ? 3 : 4; 
+    
+    for(let i=0; i < fileInput.files.length && i < maxImg; i++) {
+      const file = fileInput.files[i];
+      const compressedData = await compressImage(file, 1200, 0.7); 
+      imageFiles.push({ 
+        data: compressedData, 
+        type: 'image/jpeg',
+        name: file.name.replace(/\.[^/.]+$/, "") + ".jpg"
       });
     }
-
-    // 2. ฟังก์ชัน Save ตัวใหม่ที่เรียกใช้การบีบอัดรูป
-    async function saveDataCommon(formId, imgId) {
-      const btn = document.querySelector('#' + formId + ' .btn-submit');
-      const lod = document.getElementById('loader');
-      btn.disabled = true; 
-      lod.style.display = 'flex';
+    
+    const inspectorValue = currentUser + '-' + currentUserName;
+    let payload = { images: imageFiles, inspector: inspectorValue };
+    
+    if(formId === 'formArea') {
+      payload.date = document.getElementById('date').value;
+      payload.area = document.getElementById('area').value;
+      payload.location = document.getElementById('location').value;
+      payload.problem = document.getElementById('problem').value;
+      payload.art1 = document.getElementById('art1').value;
+      payload.desc1 = document.getElementById('desc1').value;
+      payload.qty1 = document.getElementById('qty1').value;
+      payload.art2 = document.getElementById('art2').value;
+      payload.desc2 = document.getElementById('desc2').value;
+      payload.qty2 = document.getElementById('qty2').value;
+      payload.remark = document.getElementById('remark').value;
       
-      const fileInput = document.getElementById(imgId);
-      const imageFiles = [];
-      const maxImg = (formId === 'formDCC') ? 3 : 4; 
+      google.script.run
+        .withSuccessHandler((msg) => handleSuccess(msg, formId, btn, lod))
+        .withFailureHandler((err) => handleError(err, btn, lod))
+        .saveData(payload);
+    } else {
+      payload.dccDate = document.getElementById('dccDate').value;
+      payload.type = document.getElementById('dccType').value;
+      payload.department = document.getElementById('dccDept').value;
+      payload.func = document.getElementById('dccFunc').value;
+      payload.subfunc = document.getElementById('dccSubFunc').value;
+      payload.planUnit = document.getElementById('dccPlanUnit').value;
+      payload.unitCheck = document.getElementById('dccUnitCheck').value || 0;
+      payload.errUnit = document.getElementById('dccErrUnit').value || 0;
+      payload.list1 = document.getElementById('dccList1').value;
+      payload.list2 = document.getElementById('dccList2').value;
+      payload.list3 = document.getElementById('dccList3').value;
+      payload.list4 = document.getElementById('dccList4').value;
+      payload.list5 = document.getElementById('dccList5').value;
+      payload.remark = document.getElementById('dccRemark').value;
       
-      try {
-        // ใช้ฟังก์ชันบีบอัดรูปภาพแทนการดึงขนาดเต็ม
-        for(let i=0; i<fileInput.files.length && i<maxImg; i++) {
-          const file = fileInput.files[i];
-          // ส่งไปย่อขนาด (กว้าง/ยาว ไม่เกิน 1200px) และบีบอัดคุณภาพเหลือ 70% (0.7)
-          const compressedData = await compressImage(file, 1200, 0.7); 
-          imageFiles.push({ 
-            data: compressedData, 
-            type: 'image/jpeg', // บังคับเซฟเป็น jpeg เพื่อลดขนาด
-            name: file.name.replace(/\.[^/.]+$/, "") + ".jpg" // แปลงนามสกุลไฟล์
-          });
-        }
-        
-        const inspectorValue = currentUser + '-' + currentUserName;
-        let payload = { images: imageFiles, inspector: inspectorValue };
-        
-        if(formId === 'formArea') {
-          payload.date     = document.getElementById('date').value;
-          payload.area     = document.getElementById('area').value;
-          payload.location = document.getElementById('location').value;
-          payload.problem  = document.getElementById('problem').value;
-          payload.art1     = document.getElementById('art1').value;
-          payload.desc1    = document.getElementById('desc1').value;
-          payload.qty1     = document.getElementById('qty1').value;
-          payload.art2     = document.getElementById('art2').value;
-          payload.desc2    = document.getElementById('desc2').value;
-          payload.qty2     = document.getElementById('qty2').value;
-          payload.remark   = document.getElementById('remark').value;
-          
-          google.script.run
-            .withSuccessHandler(function(msg) { 
-              handleSuccess(msg, formId, btn, lod);
-            })
-            .withFailureHandler(function(err) { 
-              handleError(err, btn, lod);
-            })
-            .saveData(payload);
-        } else {
-          payload.dccDate = document.getElementById('dccDate').value;
-          payload.type = document.getElementById('dccType').value;
-          payload.department = document.getElementById('dccDept').value;
-          payload.func = document.getElementById('dccFunc').value;
-          payload.subfunc = document.getElementById('dccSubFunc').value;
-          payload.planUnit = document.getElementById('dccPlanUnit').value;
-          payload.unitCheck = document.getElementById('dccUnitCheck').value || 0;
-          payload.errUnit = document.getElementById('dccErrUnit').value || 0;
-          payload.list1 = document.getElementById('dccList1').value;
-          payload.list2 = document.getElementById('dccList2').value;
-          payload.list3 = document.getElementById('dccList3').value;
-          payload.list4 = document.getElementById('dccList4').value;
-          payload.list5 = document.getElementById('dccList5').value;
-          payload.remark = document.getElementById('dccRemark').value;
-          
-          google.script.run
-            .withSuccessHandler(function(msg) { 
-              handleSuccess(msg, formId, btn, lod);
-            })
-            .withFailureHandler(function(err) { 
-              handleError(err, btn, lod);
-            })
-            .saveDCCData(payload);
-        }
-      } catch (error) {
-         handleError("เกิดข้อผิดพลาดในการประมวลผลรูปภาพ: " + error, btn, lod);
-      }
+      google.script.run
+        .withSuccessHandler((msg) => handleSuccess(msg, formId, btn, lod))
+        .withFailureHandler((err) => handleError(err, btn, lod))
+        .saveDCCData(payload);
     }
+  } catch (error) {
+     handleError("Error: " + error, btn, lod);
+  }
+}
+
     // ===== SCROLL HELPERS =====
     function scrollToFormTop(formId) {
       const targetId = (formId === 'formArea') ? 'content-area' : (formId === 'formDCC') ? 'content-dcc' : null;
@@ -6307,6 +6237,7 @@ function updateKpiCards(monthKey) {
   }
 
 // --- ส่วนที่ 1: ฟังก์ชันหลักในการรัน AI ---
+// ฟังก์ชันรัน AI (วางไว้ก่อนปิดแท็ก </script>)
 function runAIAnalysis() {
   const display = document.getElementById('ai-display');
   const btn = document.getElementById('btn-ai-gen');
@@ -6314,64 +6245,31 @@ function runAIAnalysis() {
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>กำลังประมวลผล...';
-  
-  display.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">กำลังรวบรวมข้อมูลจาก Spreadsheet...</p></div>';
+  display.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div><p class="mt-2">AI กำลังวิเคราะห์ข้อมูลจาก 2 Sheets...</p></div>';
 
   google.script.run
-    .withSuccessHandler(function(contextText) {
-      if (contextText === "NO_DATA") {
-        display.innerHTML = "เดือนนี้ยังไม่มีข้อมูลปัญหาครับ";
-        btn.disabled = false;
-        btn.innerHTML = 'วิเคราะห์ใหม่';
-        return;
-      }
-      // เรียกฟังก์ชัน AI ที่อยู่ด้านนอก
-      callGeminiFullMonth(contextText, display, btn);
-    })
-    .withFailureHandler(function(err) {
-      display.innerHTML = "Error: " + err;
-      btn.disabled = false;
+    .withSuccessHandler(function(context) {
+      google.script.run
+        .withSuccessHandler(function(aiText) {
+          let htmlOutput = aiText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+          display.innerHTML = `<div class="p-3 ai-result-content">${htmlOutput}</div>`; 
+          btn.disabled = false;
+          btn.innerHTML = 'วิเคราะห์ใหม่';
+        })
+        .withFailureHandler(function(err) {
+          display.innerHTML = "<div class='alert alert-danger'>Error Gemini: " + err + "</div>";
+          btn.disabled = false;
+        })
+        .callGeminiBackend(context);
     })
     .getAIDataContext();
 }
 
-// --- ส่วนที่ 2: ฟังก์ชันเรียก AI (อัปเดตใหม่ ย้ายไปประมวลผลที่ Code.gs) ---
-function callGeminiFullMonth(contextText, display, btn) {
-  display.innerHTML = "<span class='text-primary'>กำลังวิเคราะห์ข้อมูลคลังสินค้า...</span>";
-  
-  google.script.run
-    .withSuccessHandler(function(aiText) {
-      // นำผลลัพธ์ aiText ไปแสดงผลหรือจัด Format Markdown ต่อไป
-      display.innerHTML = aiText; 
-      btn.disabled = false;
-    })
-    .withFailureHandler(function(err) {
-      // แสดงข้อความ Error ที่ส่งกลับมาจาก Code.gs
-      display.innerHTML = "<div class='text-danger'><b>Error:</b> " + err.message + "</div>";
-      btn.disabled = false;
-    })
-    .callGeminiBackend(contextText);
-}
-
-  try {
-    const response = fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const json = response.json();
-    if (!response.ok) throw new Error(json.error ? json.error.message : "API Error");
-
-    const aiText = json.candidates[0].content.parts[0].text;
-    let htmlOutput = aiText.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
-    display.innerHTML = `<div class="p-3">${htmlOutput}</div>`;
-  } catch (error) {
-    display.innerHTML = `<div class="alert alert-danger">AI Error: ${error.message}</div>`;
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>อัปเดตบทวิเคราะห์';
-  }
+// ฟังก์ชันเซฟข้อมูล DCC (ที่หายไปทำให้กด Submit ไม่ได้)
+async function handleSaveDCC() {
+  if(!document.getElementById('dccDate').value) { alert('กรุณาระบุ Date'); return; }
+  if(!document.getElementById('dccType').value) { alert('กรุณาเลือก Record Type'); return; }
+  saveDataCommon('formDCC', 'imagesDCC');
 }
 </script>
 </body>
