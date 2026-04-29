@@ -115,7 +115,7 @@ function saveData(form) {
     if (!sheet) return "Error: ไม่พบชีต 'Check Area'";
 
     const dp = form.date.split('-');
-    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0];
+    const formattedDate = dp[2] + '-' + dp[1] + '-' + dp[0]; //;
 
     const folderName = "Area Inspection DCC";
     const folders = DriveApp.getFoldersByName(folderName);
