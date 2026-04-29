@@ -473,8 +473,7 @@ function calculateSummary(dccData) {
   return summary;
 }
 
-// ฟังก์ชันดึงข้อมูล "ทั้งเดือน" เพื่อส่งให้หน้าบ้านเรียกใช้ AI
-// ฟังก์ชันดึงข้อมูลจาก 2 ชีต กรองตามเดือนปัจจุบัน
+// 1. ฟังก์ชันดึงข้อมูลจาก 2 ชีต กรองตามเดือนปัจจุบัน
 function getAIDataContext() {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -484,7 +483,7 @@ function getAIDataContext() {
 
     let contextText = `รายงานวิเคราะห์คลังสินค้าประจำเดือน: ${currentMonth}\n\n`;
 
-    // 1. ดึงข้อมูลจาก DCC Data
+    // ดึงข้อมูลจาก DCC Data
     if (dccSheet) {
       const dccData = dccSheet.getDataRange().getValues();
       contextText += "--- ส่วนของ DCC Data (ปัญหาที่พบ) ---\n";
@@ -496,7 +495,7 @@ function getAIDataContext() {
       });
     }
 
-    // 2. ดึงข้อมูลจาก Check Area
+    // ดึงข้อมูลจาก Check Area
     if (areaSheet) {
       const areaData = areaSheet.getDataRange().getValues();
       contextText += "\n--- ส่วนของ Area Inspection ---\n";
@@ -512,9 +511,9 @@ function getAIDataContext() {
   } catch (e) { return "Error: " + e.message; }
 }
 
-// ฟังก์ชันเรียก Gemini API (V1)
+// 2. ฟังก์ชันเรียก Gemini API (ตัวนี้มีระบบดัก Error แล้ว!)
 function callGeminiBackend(contextText) {
-  const apiKey = "AIzaSyCH3Z7FI9Eio_-uN2Ak8AseKoTwgx5GcxY";
+  const apiKey = "AIzaSyCH3Z7FI9Eio_-uN2Ak8AseKoTwgx5GcxY"; 
   const url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
   const payload = {
@@ -525,7 +524,26 @@ function callGeminiBackend(contextText) {
     }]
   };
 
-  const options = { "method": "post", "contentType": "application/json", "payload": JSON.stringify(payload), "muteHttpExceptions": true };
-  const response = UrlFetchApp.fetch(url, options);
-  return JSON.parse(response.getContentText()).candidates[0].content.parts[0].text;
+  const options = { 
+    "method": "post", 
+    "contentType": "application/json", 
+    "payload": JSON.stringify(payload), 
+    "muteHttpExceptions": true 
+  };
+
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    const json = JSON.parse(response.getContentText());
+    
+    // ดัก Error ตรงนี้! ถ้าไม่มีข้อมูล [0] จะได้ไม่พัง
+    if (json.candidates && json.candidates.length > 0) {
+      return json.candidates[0].content.parts[0].text;
+    } else if (json.error) {
+      throw new Error("ข้อผิดพลาดจาก API: " + json.error.message);
+    } else {
+      throw new Error("API ไม่ส่งข้อมูลกลับมา กรุณาลองใหม่");
+    }
+  } catch (error) {
+    throw new Error(error.message);
+  }
 }
