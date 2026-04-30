@@ -6301,14 +6301,6 @@ function runAIAnalysis() {
     .getAIDataContext();
 }
 
-  const options = { 
-    "method": "post", 
-    "contentType": "application/json", 
-    "payload": JSON.stringify(payload), 
-    "muteHttpExceptions": true // สำคัญมาก เพื่อให้อ่าน Error จริงได้
-  };
-}
-
 // ฟังก์ชันเซฟข้อมูล DCC (ที่หายไปทำให้กด Submit ไม่ได้)
 async function handleSaveDCC() {
   if(!document.getElementById('dccDate').value) { alert('กรุณาระบุ Date'); return; }
