@@ -115,7 +115,7 @@ function saveData(form) {
     if (!sheet) return "Error: ไม่พบชีต 'Check Area'";
 
     const dp = form.date.split('-');
-    const formattedDate = dp[2] + '-' + dp[1] + '-' + dp[0]; //;
+    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0]; // เปลี่ยนเป็น วัน/เดือน/ปี
 
     const folderName = "Area Inspection DCC";
     const folders = DriveApp.getFoldersByName(folderName);
@@ -151,7 +151,7 @@ function saveDCCData(form) {
     if (!sheet) return "Error: ไม่พบชีต 'DCC Data'";
 
     const dp = form.dccDate.split('-');
-    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0];
+    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0]; // เปลี่ยนเป็น วัน/เดือน/ปี
 
     const dateObj  = new Date(form.dccDate);
     const monthStr = Utilities.formatDate(dateObj, "GMT+7", "MMM-yy");
@@ -511,39 +511,39 @@ function getAIDataContext() {
   } catch (e) { return "Error: " + e.message; }
 }
 
-// 2. ฟังก์ชันเรียก Gemini API (ตัวนี้มีระบบดัก Error แล้ว!)
 function callGeminiBackend(contextText) {
-  const apiKey = "AIzaSyCH3Z7FI9Eio_-uN2Ak8AseKoTwgx5GcxY"; 
-  const url = "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=" + apiKey;
+  // 1. ใช้คีย์ AIzaSy... ที่สร้างจาก Google AI Studio เท่านั้น (ตัวที่เพิ่งสร้างใหม่)
+  const apiKey = "AIzaSyBPvBsvoIh6bIXbNNgjQhANjlutD95NV_8"; 
+  
+  // 2. ใช้ชื่อรุ่นแบบ Full Version (001) และ API v1 เพื่อความเสถียรสูงสุด
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0:generateContent?key=" + apiKey;
 
   const payload = {
     "contents": [{
       "parts": [{
-        "text": "คุณเป็นผู้เชี่ยวชาญด้านคลังสินค้า สรุปรายงาน Dashboard เป็น 2 หน้า (หน้า 1: ภาพรวมและจุดวิกฤต, หน้า 2: สาเหตุและแผนงานแก้ไข) โดยใช้ข้อมูลนี้:\n\n" + contextText
+        "text": "สรุปรายงานคลังสินค้าแยกเป็น 2 ส่วน (ภาพรวม/วิกฤต และ แผนแก้ไข) จากข้อมูลนี้:\n\n" + contextText
       }]
     }]
   };
 
-  const options = { 
-    "method": "post", 
-    "contentType": "application/json", 
-    "payload": JSON.stringify(payload), 
-    "muteHttpExceptions": true 
-  };
-
   try {
-    const response = UrlFetchApp.fetch(url, options);
-    const json = JSON.parse(response.getContentText());
+    const response = UrlFetchApp.fetch(url, {
+      "method": "post",
+      "contentType": "application/json",
+      "payload": JSON.stringify(payload),
+      "muteHttpExceptions": true
+    });
     
-    // ดัก Error ตรงนี้! ถ้าไม่มีข้อมูล [0] จะได้ไม่พัง
-    if (json.candidates && json.candidates.length > 0) {
+    const resText = response.getContentText();
+    const json = JSON.parse(resText);
+
+    if (json.candidates && json.candidates[0].content) {
       return json.candidates[0].content.parts[0].text;
-    } else if (json.error) {
-      throw new Error("ข้อผิดพลาดจาก API: " + json.error.message);
     } else {
-      throw new Error("API ไม่ส่งข้อมูลกลับมา กรุณาลองใหม่");
+      // ถ้า Error มันจะพ่นสาเหตุจริงๆ ออกมา (เช่น Quota หรือ API Disabled)
+      throw new Error(resText); 
     }
-  } catch (error) {
-    throw new Error(error.message);
+  } catch (e) {
+    throw new Error("ระบบ AI ขัดข้อง: " + e.message);
   }
 }
