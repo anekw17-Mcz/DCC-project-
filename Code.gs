@@ -1,4 +1,3 @@
-// ============================================================
 // SCD Inspection System — Apps Script (Full Version)
 // Standard Control and Development · Inspection Management System
 // ============================================================
@@ -34,7 +33,7 @@ function getDCCMasterData() {
   const rawData = sheet.getRange(2, 1, lastRow - 1, 10).getValues();
   return rawData.map(function(row) {
     if (row[0] === 'Checklist' && row[2] && row[2].toString().toLowerCase().indexOf('audit') !== -1) {
-      row[4] = Math.round(row[4] / 2);
+      row[4] = Math.ceil(row[4] / 2);
     }
     return row;
   });
@@ -355,7 +354,7 @@ function calculateWaiting(dccData, masterData) {
     const dept    = (row[1]||'').toString().trim();
     const func    = (row[2]||'').toString().trim();
     const subfunc = (row[3]||'').toString().trim();
-    const target  = parseFloat(row[4])||0;
+    const target  = Math.ceil(parseFloat(row[4])||0);
     if (type !== 'Checklist') return;
     const fKey = dept + '|' + func;
     if (!masterFuncGroup[fKey]) masterFuncGroup[fKey] = [];
@@ -471,42 +470,4 @@ function calculateSummary(dccData) {
     }
   });
   return summary;
-}
-
-// 1. ฟังก์ชันดึงข้อมูลจาก 2 ชีต กรองตามเดือนปัจจุบัน
-function getAIDataContext() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const dccSheet = ss.getSheetByName("DCC Data");
-    const areaSheet = ss.getSheetByName("Check Area");
-    const currentMonth = Utilities.formatDate(new Date(), "GMT+7", "MMM-yy"); // เช่น Apr-26
-
-    let contextText = `รายงานวิเคราะห์คลังสินค้าประจำเดือน: ${currentMonth}\n\n`;
-
-    // ดึงข้อมูลจาก DCC Data
-    if (dccSheet) {
-      const dccData = dccSheet.getDataRange().getValues();
-      contextText += "--- ส่วนของ DCC Data (ปัญหาที่พบ) ---\n";
-      dccData.forEach((row, i) => {
-        if (i === 0) return; // ข้ามหัวตาราง
-        if (String(row[1]).trim() === currentMonth && (parseFloat(row[11]) > 0)) {
-          contextText += `- แผนก: ${row[6]}, ปัญหา: ${row[8]}, จำนวน Error: ${row[11]}\n`;
-        }
-      });
-    }
-
-    // ดึงข้อมูลจาก Check Area
-    if (areaSheet) {
-      const areaData = areaSheet.getDataRange().getValues();
-      contextText += "\n--- ส่วนของ Area Inspection ---\n";
-      areaData.forEach((row, i) => {
-        if (i === 0) return;
-        const rowDateStr = row[0]; // dd/MM/yyyy
-        if (rowDateStr && rowDateStr.includes("/" + (new Date().getMonth() + 1).toString().padStart(2, '0') + "/")) {
-          contextText += `- พื้นที่: ${row[1]}, จุดตรวจ: ${row[2]}, ปัญหา: ${row[3]}\n`;
-        }
-      });
-    }
-    return contextText;
-  } catch (e) { return "Error: " + e.message; }
 }
