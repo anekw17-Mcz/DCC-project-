@@ -1354,38 +1354,7 @@ td.progress-cell .progress-bar { font-size: 12px; font-weight: 800; white-space:
     </button>
   </div>
 </div>
-          <!-- AUDIT DASHBOARD TAB -->
-<div class="tab-pane fade" id="content-audit">
-  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e3a8a 100%);border-radius:16px;padding:20px 24px;margin-bottom:14px;color:#fff;">
-    <div class="fw-bold" style="font-size:1.1rem;"><i class="bi bi-clipboard2-check me-2"></i>สรุปข้อมูลเฉพาะหัวข้อ: 1.ตรวจความถูกต้องคลังสินค้า (ฟังก์ชั่น Audit)</div>
-  </div>
 
-  <div class="row g-3 mb-4" id="audit-kpi-container">
-    <!-- KPI Cards จะถูกสร้างโดย JavaScript -->
-  </div>
-
-  <div class="card border-0 shadow-sm" style="border-radius:12px;">
-    <div class="card-body">
-      <h6 class="fw-bold text-primary mb-3"><i class="bi bi-images me-2"></i>รายการเคสที่พบปัญหา (พร้อมรูปถ่าย)</h6>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>วันที่</th>
-              <th>Area</th>
-              <th>Location</th>
-              <th>สาเหตุ / Problem</th>
-              <th class="text-center">รูปภาพตัวอย่าง</th>
-            </tr>
-          </thead>
-          <tbody id="audit-table-body">
-            <!-- ข้อมูลจะถูกสร้างโดย JavaScript -->
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
                 </div>
               </div>                       
 <div class="report-subtabs">
@@ -4855,7 +4824,7 @@ function updateKpiCards(monthKey) {
                   // 🟢 เปลี่ยนขนาดเป็น 140x140px (ประมาณ 4.5 - 5 cm) และใช้ onclick ตัวใหม่
                   return `<div onclick="viewFullImage(event, '${url}')" title="คลิกเพื่อดูรูปขยาย" 
                       style="display:inline-block; width:140px; height:140px; margin:4px; border:2px solid #e2e8f0; border-radius:8px; overflow:hidden; cursor:pointer; background:#f8fafc; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s;"
-                      onmouseover="this.style.transform='scale(1.05)'; this.style.box-shadow='0 6px 12px rgba(0,0,0,0.2)';"
+                      onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow = '0 6px 12px rgba(0,0,0,0.2)'
                       onmouseout="this.style.transform='scale(1)'; this.style.box-shadow='0 4px 6px rgba(0,0,0,0.1)';"
                       >
                        <img src="${directUrl}" style="width:100%; height:100%; object-fit:cover;">
@@ -6733,11 +6702,10 @@ function _chartAreaMonth(areaData) {
         tooltip: { callbacks: { label: function(c) { return ' ' + c.raw + ' เคส'; } } }
       },
       scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-      }
-      scales: {
-        x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 30, minRotation: 0 } },
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0, autoSkip: false }
+        },
         y: { beginAtZero: true, ticks: { stepSize: 1 } }
       }
     }
@@ -6748,36 +6716,37 @@ function _renderAreaPhotos(areaData) {
   var grid = document.getElementById('area-photo-grid');
   var empty = document.getElementById('area-photo-empty');
   if (!grid) return;
-  var photos = [];
+  var allPhotos = [];
   for (var i = 0; i < areaData.length; i++) {
-    for (var c = 10; c <= 13; c++) {
-      var url = (areaData[i][c] || '').toString().trim();
-      if (url.startsWith('http')) {
-        photos.push({ url: url, area: areaData[i][1] || '', date: areaData[i][0] || '', problem: areaData[i][3] || '' });
+    var r = areaData[i];
+    var cols = [r[10], r[11], r[12], r[13]];
+    for (var c = 0; c < cols.length; c++) {
+      if (cols[c] && String(cols[c]).trim().startsWith('http')) {
+        allPhotos.push({ url: cols[c], date: r[0], area: (r[1]||'').trim(), problem: (r[3]||'').trim() });
       }
     }
   }
-  if (!photos.length) {
+  if (!allPhotos.length) {
     grid.innerHTML = '';
-    if (empty) empty.style.display = '';
+    if (empty) empty.style.display = 'block';
     return;
   }
   if (empty) empty.style.display = 'none';
-  photos.sort(function() { return Math.random() - 0.5; });
-  var show = photos.slice(0, 16);
-  grid.innerHTML = show.map(function(p) {
-    var m = p.url.match(/[-\w]{25,}/);
-    var thumb;
-    if (m) {
-    thumb = "https://drive.google.com/thumbnail?id=" + m[0] + "&sz=w300";
-    } else {
-    thumb = p.url;
-    }
-    return '<div onclick="viewFullImage(event,\'' + p.url + '\')" title="' + p.area + ' | ' + p.date + '" style="cursor:pointer;position:relative;">' +
-      '<img src="' + thumb + '" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:2px solid #e2e8f0;transition:transform .2s;" onmouseover="this.style.transform=\'scale(1.08)\'" onmouseout="this.style.transform=\'scale(1)\'">' +
-      '<div style="position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.55);color:#fff;font-size:9px;padding:2px 4px;border-radius:0 0 7px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.area + '</div>' +
-      '</div>';
-  }).join('');
+  var count = 14 + Math.floor(Math.random() * 3);
+  var shuffled = allPhotos.slice().sort(function() { return Math.random() - 0.5; });
+  var show = shuffled.slice(0, count);
+  var html = '';
+  for (var s = 0; s < show.length; s++) {
+    var p = show[s];
+    var thumb = getDirectImgUrl(p.url);
+    html += '<img src="' + thumb + '"'
+      + ' style="width:72px;height:72px;object-fit:cover;border-radius:8px;cursor:pointer;border:2px solid #e2e8f0;transition:transform 0.2s;"'
+      + ' title="' + p.date + ' | ' + p.area + ' | ' + p.problem + '"'
+      + ' onmouseover="this.style.transform=\'scale(1.15)\'"'
+      + ' onmouseout="this.style.transform=\'scale(1)\'"'
+      + ' onclick="viewFullImage(event,\'' + thumb + '\')">';
+  }
+  grid.innerHTML = html;
 }
 </script>
 </body>
