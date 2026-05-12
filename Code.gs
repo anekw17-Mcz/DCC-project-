@@ -1,13 +1,45 @@
 // SCD Inspection System — Apps Script (Full Version)
 // Standard Control and Development · Inspection Management System
 // ============================================================
+// ⚠️ มี doGet() ตัวเดียว — รองรับทั้ง มือถือ (Form.html) และ Desktop Dashboard (JSONP/JSON)
+// ============================================================
 
-function doGet() {
+function doGet(e) {
+  var callback = e && e.parameter && e.parameter.callback;
+
+  // ── Desktop Dashboard เรียก ?action=json ──────────────────────────
+  if (e && e.parameter && e.parameter.action === 'json') {
+    var data;
+    try {
+      data = getReportData();
+    } catch(err) {
+      data = { error: err.toString() };
+    }
+    var jsonStr = JSON.stringify(data);
+
+    // JSONP mode (เมื่อ HTML เปิดจาก file://) — เลี่ยง CORS ได้ 100%
+    if (callback) {
+      return ContentService
+        .createTextOutput(callback + '(' + jsonStr + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
+
+    // JSON mode ปกติ
+    return ContentService
+      .createTextOutput(jsonStr)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ── มือถือ / เปิดปกติ → Form.html ────────────────────────────────
   return HtmlService.createTemplateFromFile('Form')
-      .evaluate()
-      .setTitle('SCD Inspection App')
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+    .evaluate()
+    .setTitle('SCD Inspection App')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// ฟังก์ชันอื่นๆ คงเดิมทั้งหมด
+// ─────────────────────────────────────────────────────────────────────
 
 function getAppUrl() {
   return ScriptApp.getService().getUrl();
@@ -114,7 +146,7 @@ function saveData(form) {
     if (!sheet) return "Error: ไม่พบชีต 'Check Area'";
 
     const dp = form.date.split('-');
-    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0]; // เปลี่ยนเป็น วัน/เดือน/ปี
+    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0];
 
     const folderName = "Area Inspection DCC";
     const folders = DriveApp.getFoldersByName(folderName);
@@ -150,7 +182,7 @@ function saveDCCData(form) {
     if (!sheet) return "Error: ไม่พบชีต 'DCC Data'";
 
     const dp = form.dccDate.split('-');
-    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0]; // เปลี่ยนเป็น วัน/เดือน/ปี
+    const formattedDate = dp[2] + '/' + dp[1] + '/' + dp[0];
 
     const dateObj  = new Date(form.dccDate);
     const monthStr = Utilities.formatDate(dateObj, "GMT+7", "MMM-yy");
@@ -185,13 +217,10 @@ function saveDCCData(form) {
       form.inspector
     ]);
 
-    // ── บังคับ Col B (Month) เป็น plain text เสมอ ──────────────────
-    // Sheets auto-convert "Jan-26" / "Feb-26" เป็น Date → ต้อง setNumberFormat("@")
     const newRow = sheet.getLastRow();
-    sheet.getRange(newRow, 2).setNumberFormat("@");        // Col B = Month
-    sheet.getRange(newRow, 4).setNumberFormat("@");        // Col D = FuncWeek
-    sheet.getRange(newRow, 5).setNumberFormat("@");        // Col E = DepWeek
-    // re-set ค่าใหม่หลัง format เพื่อให้ text แสดงถูกต้อง
+    sheet.getRange(newRow, 2).setNumberFormat("@");
+    sheet.getRange(newRow, 4).setNumberFormat("@");
+    sheet.getRange(newRow, 5).setNumberFormat("@");
     sheet.getRange(newRow, 2).setValue(monthStr);
     sheet.getRange(newRow, 4).setValue(funcWeek);
     sheet.getRange(newRow, 5).setValue(depWeek);
@@ -205,11 +234,6 @@ function getReportData() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     Logger.log("=== START getReportData ===");
 
-    // ── DCC Data ──────────────────────────────────────────────────────
-    // Columns: [0]=Date [1]=Month [2]=Week [3]=FuncWeek [4]=DepWeek
-    //          [5]=Type [6]=Dept [7]=Func [8]=SubFunc
-    //          [9]=PlanUnit [10]=UnitCheck [11]=ErrUnit
-    //          [12-16]=List1-5 [17]=Remark [18-20]=Images [21]=Inspector
     const dccSheet = ss.getSheetByName("DCC Data");
     if (!dccSheet) throw new Error("ไม่พบชีต 'DCC Data'");
 
@@ -230,14 +254,11 @@ function getReportData() {
       });
     }
 
-    // ── Master DCC ────────────────────────────────────────────────────
-    // Columns: [0]=Type [1]=Dept [2]=Func [3]=SubFunc [4]=Target(monthly)
     const masterSheet = ss.getSheetByName("Master DCC");
     let masterData = [];
     if (masterSheet && masterSheet.getLastRow() > 1)
       masterData = masterSheet.getRange(2, 1, masterSheet.getLastRow() - 1, 10).getValues();
 
-    // ── Area Data ─────────────────────────────────────────────────────
     let areaData = [];
     try {
       const areaSheet = ss.getSheetByName("Check Area");
@@ -282,12 +303,6 @@ function getReportData() {
   }
 }
 
-// ================================================================
-// calculateWaiting — แก้ไข matching logic
-// เดิม: match ด้วย subfunc เดียว → พัง ถ้าชื่อไม่ตรงเป๊ะ
-// ใหม่: match ด้วย dept + func (2 levels) → แม่นยำกว่า
-//        และ aggregate unitCheck ทุก subfunc ที่อยู่ใน dept+func เดียวกัน
-// ================================================================
 function calculateWaiting(dccData, masterData) {
   const waiting      = [];
   const currentDate  = new Date();
@@ -304,20 +319,18 @@ function calculateWaiting(dccData, masterData) {
     halfYearEnd   = new Date(currentDate.getFullYear(), 11, 31);
   }
 
-  // ── Build checked maps ────────────────────────────────────────────
-  // checklistMap: key = "dept|func|subfunc" (3-level exact) + "dept|func" (2-level aggregate)
-  const checklistExact = {};   // dept|func|subfunc → unitCheck sum
-  const checklistFunc  = {};   // dept|func         → unitCheck sum (fallback)
-  const pmwiMap        = {};   // dept|subfunc       → count
+  const checklistExact = {};
+  const checklistFunc  = {};
+  const pmwiMap        = {};
 
   dccData.forEach(function(row) {
-    const dateStr    = row[0]||'';
-    const month      = row[1]||'';
-    const type       = (row[5]||'').toString().trim();
-    const dept       = (row[6]||'').toString().trim();
-    const func       = (row[7]||'').toString().trim();
-    const subfunc    = (row[8]||'').toString().trim();
-    const unitCheck  = parseFloat(row[10])||0;
+    const dateStr   = row[0]||'';
+    const month     = row[1]||'';
+    const type      = (row[5]||'').toString().trim();
+    const dept      = (row[6]||'').toString().trim();
+    const func      = (row[7]||'').toString().trim();
+    const subfunc   = (row[8]||'').toString().trim();
+    const unitCheck = parseFloat(row[10])||0;
 
     let rowDate = null;
     if (dateStr) {
@@ -330,25 +343,17 @@ function calculateWaiting(dccData, masterData) {
         const key = dept + '|' + subfunc;
         pmwiMap[key] = (pmwiMap[key]||0) + 1;
       }
-
     } else if (type === 'Checklist') {
       if (month === currentMonth) {
-        // 3-level exact key
         const exactKey = dept + '|' + func + '|' + subfunc;
         checklistExact[exactKey] = (checklistExact[exactKey]||0) + unitCheck;
-        // 2-level aggregate key (fallback ถ้า subfunc ชื่อต่างกัน)
         const funcKey = dept + '|' + func;
         checklistFunc[funcKey] = (checklistFunc[funcKey]||0) + unitCheck;
       }
     }
   });
 
-  // ── Match Checklist: Master → checked ────────────────────────────
-  // Strategy: ลอง exact match ก่อน ถ้าไม่เจอใช้ func-level aggregate
-  //           แบ่ง aggregate ตาม proportion ของ target แต่ละ subfunc
-  
-  // Group master Checklist by dept|func เพื่อคำนวณ proportion
-  const masterFuncGroup = {}; // dept|func → [{subfunc, target}]
+  const masterFuncGroup = {};
   masterData.forEach(function(row) {
     const type    = (row[0]||'').toString().trim();
     const dept    = (row[1]||'').toString().trim();
@@ -361,13 +366,10 @@ function calculateWaiting(dccData, masterData) {
     masterFuncGroup[fKey].push({ dept:dept, func:func, subfunc:subfunc, target:target });
   });
 
-  // Process each master func group
   Object.keys(masterFuncGroup).forEach(function(fKey) {
     var items       = masterFuncGroup[fKey];
     var totalTarget = items.reduce(function(s,x){return s+x.target;},0);
     var funcChecked = checklistFunc[fKey] || 0;
-
-    // ตรวจว่า func group นี้มี exact match อยู่บ้างไหม
     var anyExactMatch = items.some(function(item) {
       return checklistExact[item.dept + '|' + item.func + '|' + item.subfunc] !== undefined;
     });
@@ -375,24 +377,15 @@ function calculateWaiting(dccData, masterData) {
     items.forEach(function(item) {
       var exactKey     = item.dept + '|' + item.func + '|' + item.subfunc;
       var exactChecked = checklistExact[exactKey];
-
       var checked;
+
       if (exactChecked !== undefined) {
-        // ✅ exact match — ใช้ค่าจริง
         checked = exactChecked;
-
       } else if (items.length === 1 && !anyExactMatch) {
-        // มีแค่ subfunc เดียวและไม่มี exact match → ใช้ func aggregate
         checked = funcChecked;
-
       } else if (anyExactMatch) {
-        // func group นี้มี subfunc บางตัว exact match แล้ว
-        // subfunc ที่ไม่มีข้อมูล = ยังไม่ได้ตรวจจริง → checked = 0
         checked = 0;
-
       } else {
-        // ไม่มี exact match เลยใน func group → proportion fallback
-        // (กรณีนี้เกิดเมื่อ subfunc ชื่อต่างกันทั้งหมด)
         var ratio = totalTarget > 0 ? item.target / totalTarget : 0;
         checked = Math.round(funcChecked * ratio);
       }
@@ -414,7 +407,6 @@ function calculateWaiting(dccData, masterData) {
     });
   });
 
-  // ── Match PMWI ────────────────────────────────────────────────────
   const pmwiByDept = {};
   masterData.forEach(function(row) {
     const type    = (row[0]||'').toString().trim();
